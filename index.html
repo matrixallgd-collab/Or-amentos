@@ -35,9 +35,9 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body {
-      max-width: 100%;
-      overflow-x: hidden;
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
     }
 
     body {
@@ -47,9 +47,10 @@
         radial-gradient(circle at 88% 8%, rgba(7, 19, 58, 0.08) 0%, transparent 45%),
         #EEF2F7;
       color: #0F172A;
-      padding-bottom: calc(104px + var(--safe-bottom));
-      overscroll-behavior-y: contain;
-      user-select: none;
+      padding-bottom: calc(110px + var(--safe-bottom));
+      overflow-x: clip;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y pinch-zoom;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -137,8 +138,16 @@
     }
 
     .touch-btn {
-      min-height: 46px;
+      min-height: 50px;
       transition: all 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .apple-drawer {
+      transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .fuzzy-dropdown {
+      max-height: 210px;
+      overflow-y: auto;
+      box-shadow: 0 18px 38px rgba(7, 19, 58, 0.18);
     }
     .touch-btn:active {
       transform: scale(0.97);
@@ -309,6 +318,48 @@
   <!-- ======================================================================== -->
   <main class="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-5 pt-3.5 pb-8 space-y-4">
 
+    <!-- BANNER DE CHECK-IN GPS & CRONÔMETRO DE VISTORIA NO LOCAL -->
+    <section id="activeVisitTimerBanner" class="hidden bg-gradient-to-r from-[#07133A] to-indigo-950 text-white rounded-3xl p-4 shadow-lg border border-[#DFC48B]/40 space-y-2.5">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
+          <div class="min-w-0">
+            <span id="visitTimerStatusBadge" class="text-[10px] font-black uppercase tracking-wider text-[#DFC48B] block">
+              📍 EM DESLOCAMENTO / NO LOCAL DA VISTORIA
+            </span>
+            <h3 id="visitTimerAddressTitle" class="text-sm sm:text-base font-black truncate">Imóvel</h3>
+          </div>
+        </div>
+        <div class="bg-white/10 px-3.5 py-1.5 rounded-2xl border border-white/20 text-right shrink-0">
+          <span class="text-[10px] text-slate-300 uppercase font-bold block">Tempo no Local</span>
+          <span id="visitTimerClockDisplay" class="text-lg font-black text-[#DFC48B] tabular-nums">00:00</span>
+        </div>
+      </div>
+      <p id="visitTimerSubtext" class="text-xs text-slate-200">
+        O sistema detecta sua chegada pelo GPS ou você pode tocar em confirmar chegada abaixo.
+      </p>
+      <div class="flex flex-wrap gap-2 pt-1">
+        <button type="button" id="btnConfirmArrivalNow" class="touch-btn flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black rounded-2xl py-2.5 px-3 text-xs flex items-center justify-center gap-1.5">
+          📍 Confirmar Chegada no Imóvel
+        </button>
+        <button type="button" id="btnOpenVisitJobEditor" class="touch-btn flex-1 bg-[#B6985A] hover:bg-[#a68849] text-slate-950 font-black rounded-2xl py-2.5 px-3 text-xs flex items-center justify-center gap-1.5">
+          📸 Abrir Cômodos &amp; Fotos
+        </button>
+        <button type="button" id="btnFinishVisitTimer" class="touch-btn flex-1 bg-white/15 hover:bg-white/25 text-white font-extrabold rounded-2xl py-2.5 px-3 text-xs flex items-center justify-center gap-1.5">
+          🏁 Encerrar Visita &amp; Ver Eficiência IA
+        </button>
+      </div>
+    </section>
+
+    <!-- CAIXA DE SUGESTÕES DE EFICIÊNCIA DE TEMPO PELA IA INTERNA -->
+    <section id="aiTimeEfficiencyBox" class="hidden bg-indigo-950 text-white rounded-3xl p-4 shadow-lg border border-indigo-400/40 space-y-2">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-xs font-black text-[#DFC48B] uppercase">⏱️ Diagnóstico de Tempo &amp; Eficiência (IA Interna Tot@l Service)</span>
+        <button type="button" id="btnCloseAiTimeBox" class="text-xs font-bold text-slate-300 hover:text-white">Fechar ✕</button>
+      </div>
+      <div id="aiTimeEfficiencyContent" class="text-xs text-slate-100 leading-relaxed whitespace-pre-line"></div>
+    </section>
+
     <!-- BANNER DE RECUPERAÇÃO ANTI-FECHAMENTO (iPHONE / iOS SAFARI) -->
     <section id="draftsRecoveryBanner" class="hidden bg-amber-50 border-2 border-amber-400 rounded-2xl p-3.5 shadow-sm space-y-2.5">
       <div class="flex items-center justify-between gap-2">
@@ -407,7 +458,8 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div class="sm:col-span-2">
             <label class="block text-[11px] font-bold text-slate-700 mb-1">Endereço do Imóvel (Recebido no Grupo) *</label>
-            <input id="quickMarceloImovel" list="imoveisDatalist" type="text" required placeholder="Ex: Rua Rubens de Mello Souza 7-65" class="w-full px-3 py-2.5 rounded-xl border border-amber-300 bg-white text-xs font-bold outline-none" />
+            <input id="quickMarceloImovel" list="imoveisDatalist" type="text" required autocomplete="off" placeholder="Ex: Rua Rubens de Mello Souza 7-65" class="w-full px-3 py-2.5 rounded-xl border border-amber-300 bg-white text-xs font-bold outline-none" />
+            <div id="fuzzyQuickMarceloSuggestions" class="hidden fuzzy-dropdown mt-1 bg-white rounded-xl border border-amber-400 divide-y divide-slate-100"></div>
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">Imobiliária / Particular / Seguradora</label>
@@ -436,9 +488,9 @@
     </section>
 
     <!-- ====================================================================== -->
-    <!-- EDITOR DE VISTORIA POR CÔMODO & ORÇAMENTO (ADAPTA À CAMILA OU MARCELO) -->
+    <!-- EDITOR PASSO A PASSO (3 ETAPAS CLARAS: 1. IMÓVEL -> 2. CÔMODOS -> 3. CONCLUIR) -->
     <!-- ====================================================================== -->
-    <section id="editorSection" class="hidden bg-white rounded-3xl p-4 sm:p-5 border-2 border-[#07133A] shadow-lg space-y-4">
+    <section id="editorSection" class="hidden bg-white rounded-3xl p-4 sm:p-5 border-2 border-[#07133A] shadow-xl space-y-4">
       <div class="flex items-start justify-between gap-2 pb-3 border-b border-slate-200 flex-wrap">
         <div>
           <div class="flex items-center gap-1.5 flex-wrap">
@@ -446,189 +498,254 @@
               Ficha do Imóvel
             </span>
             <span id="draftAutoSaveBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-              📝 Auto-save ativo
+              📝 Salvo automático
             </span>
           </div>
           <h2 id="editorMainTitle" class="text-base sm:text-lg font-extrabold text-slate-900 mt-1">
             Vistoria por Cômodo &amp; Orçamento
           </h2>
         </div>
-        <div class="flex items-center gap-1.5">
-          <button type="button" id="btnOpenImportImobModal" class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-extrabold text-xs">
-            📋 Preencher c/ Print ou Texto da Imobiliária
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <button type="button" id="btnOpenImportImobModal" class="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-extrabold text-xs">
+            📋 Ler Texto/Print Imobiliária
           </button>
-          <button type="button" id="btnCloseEditor" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">
-            Fechar ✕
+          <button type="button" id="btnCloseEditor" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs">
+            ✕ Voltar p/ Lista
           </button>
         </div>
+      </div>
+
+      <!-- BARRA DE ETAPAS DO FORMULÁRIO (PODE PULAR QUALQUER ETAPA OU VER TUDO JUNTO) -->
+      <div class="space-y-1.5">
+        <div class="grid grid-cols-4 gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+          <button type="button" data-wizard-step-btn="1" class="wizard-step-tab py-3 px-2 rounded-xl text-xs font-black bg-[#07133A] text-[#DFC48B] shadow-xs transition text-center">
+            1. Imóvel
+          </button>
+          <button type="button" data-wizard-step-btn="2" class="wizard-step-tab py-3 px-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-white/60 transition text-center">
+            2. Cômodos (<span id="wizardRoomsCountBadge">0</span>)
+          </button>
+          <button type="button" data-wizard-step-btn="3" class="wizard-step-tab py-3 px-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-white/60 transition text-center">
+            3. Valores
+          </button>
+          <button type="button" data-wizard-step-btn="0" class="wizard-step-tab py-3 px-2 rounded-xl text-xs font-extrabold text-indigo-900 bg-indigo-50/80 hover:bg-indigo-100 transition text-center" title="Pular etapas e ver a ficha inteira de uma vez">
+            ⚡ Tudo Junto
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-500 text-center font-medium">
+          Toque em qualquer etapa acima para <b>pular direto</b> (não precisa preencher na ordem).
+        </p>
       </div>
 
       <form id="formJobEditor" class="space-y-4">
         <input type="hidden" id="editJobId" value="" />
 
-        <!-- 1. IDENTIFICAÇÃO SIMPLES E RÁPIDA (SEM POLUIÇÃO DE CNPJ!) -->
-        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <span class="text-xs font-extrabold text-[#07133A] uppercase tracking-wider">
-              🏠 1. Dados do Imóvel &amp; Formato do Orçamento
-            </span>
-            <!-- Seletor de Formato: Particular/Imobiliária (Global no final) vs. Seguradora (Preço por item) -->
-            <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-300">
-              <button type="button" data-set-dest-type="PARTICULAR" class="dest-type-btn px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold bg-[#07133A] text-white">
-                Particular / Imobiliária (Valor no Final)
-              </button>
-              <button type="button" data-set-dest-type="SEGURADORA" class="dest-type-btn px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold text-slate-600 hover:bg-slate-100">
-                Seguradora (Preço Item por Item)
-              </button>
-            </div>
-          </div>
-          <input type="hidden" id="jobTipoDestinatario" value="PARTICULAR" />
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div class="sm:col-span-2">
-              <label class="block text-xs font-bold text-slate-700 mb-1">Endereço do Imóvel * <span class="text-[10px] font-normal text-slate-400">(Autocomplete padronizado)</span></label>
-              <input id="jobImovel" list="imoveisDatalist" type="text" required placeholder="Ex: RUA RUBENS DE MELLO SOUZA 7-65" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-extrabold text-slate-900 outline-none focus:border-[#07133A]" />
-              <div id="editorAddressHistoryAlert" class="hidden mt-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-[11px] font-bold text-indigo-900 flex items-center justify-between gap-2">
-                <span id="editorAddressHistoryText">📜 Este imóvel já possui histórico anterior.</span>
-                <button type="button" id="btnViewEditorAddressHistory" class="px-2 py-0.5 rounded-lg bg-indigo-600 text-white text-[10px] font-extrabold shrink-0">Ver Histórico</button>
+        <!-- ============================================================== -->
+        <!-- PASSO 1: ENDEREÇO DO IMÓVEL & CLIENTE/IMOBILIÁRIA              -->
+        <!-- ============================================================== -->
+        <div id="wizardStep1" class="space-y-4">
+          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3.5">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <span class="text-xs font-extrabold text-[#07133A] uppercase tracking-wider">
+                🏠 Passo 1 de 3 — Dados do Imóvel &amp; Formato
+              </span>
+              <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-300 w-full sm:w-auto">
+                <button type="button" data-set-dest-type="PARTICULAR" class="dest-type-btn flex-1 sm:flex-initial px-2.5 py-2 rounded-lg text-[11px] font-extrabold bg-[#07133A] text-white">
+                  Particular / Imob. (Global)
+                </button>
+                <button type="button" data-set-dest-type="SEGURADORA" class="dest-type-btn flex-1 sm:flex-initial px-2.5 py-2 rounded-lg text-[11px] font-extrabold text-slate-600 hover:bg-slate-100">
+                  Seguradora (Por Item)
+                </button>
               </div>
             </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Cliente / Imobiliária (Opcional)</label>
-              <input id="jobClienteOuImob" list="clientesImobiliariasDatalist" type="text" placeholder="Ex: Particular ou Grizoni" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800 outline-none focus:border-[#07133A]" />
+            <input type="hidden" id="jobTipoDestinatario" value="PARTICULAR" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="sm:col-span-2 relative">
+                <label class="block text-xs font-extrabold text-slate-800 mb-1">
+                  Endereço do Imóvel * <span class="text-[11px] font-normal text-indigo-700">(Busca inteligente mesmo digitando errado)</span>
+                </label>
+                <input id="jobImovel" list="imoveisDatalist" type="text" required autocomplete="off" placeholder="Digite a rua ou número (Ex: rubens melo, pedro fernandes...)" class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-300 bg-white font-extrabold text-slate-900 outline-none focus:border-[#07133A]" />
+                <!-- Lista de Sugestões Tolerante a Erros de Digitação (Fuzzy Match) -->
+                <div id="fuzzyAddressSuggestions" class="hidden fuzzy-dropdown mt-1 bg-white rounded-2xl border-2 border-[#07133A] divide-y divide-slate-100 z-30"></div>
+
+                <div id="editorAddressHistoryAlert" class="hidden mt-2 px-3 py-2.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-900 flex items-center justify-between gap-2">
+                  <span id="editorAddressHistoryText">📜 Este imóvel já possui histórico anterior.</span>
+                  <button type="button" id="btnViewEditorAddressHistory" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-extrabold shrink-0">Ver Histórico</button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-extrabold text-slate-800 mb-1">Cliente / Imobiliária</label>
+                <input id="jobClienteOuImob" list="clientesImobiliariasDatalist" type="text" placeholder="Ex: Particular ou Grizoni" class="w-full px-3.5 py-3.5 rounded-2xl border-2 border-slate-300 bg-white font-bold text-slate-800 outline-none focus:border-[#07133A]" />
+              </div>
+            </div>
+
+            <!-- Gaveta Progressiva: abre sozinha após digitar o endereço ou ao tocar -->
+            <div class="pt-1">
+              <button type="button" id="btnToggleStep1ExtraDrawer" class="text-xs font-extrabold text-[#07133A] flex items-center gap-1.5 py-1">
+                <span id="step1ExtraDrawerIcon">▾</span>
+                <span>Opções de Telefone, Prazo e Data (Gaveta inteligente)</span>
+              </button>
+              <div id="step1ExtraDrawer" class="hidden apple-drawer mt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3 rounded-2xl border border-slate-200">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Telefone do Cliente (p/ Agendar)</label>
+                  <input id="jobTelefoneCliente" type="tel" placeholder="(14) 99999-0000" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-xs outline-none" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Prazo de Execução (No PDF)</label>
+                  <input id="jobPrazoExecucao" type="text" placeholder="Ex: Prazo de execução 15 dias." class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-xs outline-none" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Data do Orçamento</label>
+                  <input id="jobDataEmissao" type="date" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-xs outline-none" />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">Telefone do Cliente (p/ Agendar)</label>
-              <input id="jobTelefoneCliente" type="tel" placeholder="(14) 99999-0000" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs outline-none" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">Prazo de Execução (No PDF)</label>
-              <input id="jobPrazoExecucao" type="text" placeholder="Ex: Prazo de execução 60 dias." class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs outline-none" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">Data do Orçamento</label>
-              <input id="jobDataEmissao" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs outline-none" />
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. CÔMODOS / AMBIENTES DO IMÓVEL (ESTILO AVALIAÇÃO DE CARRO: PROBLEMAS + FOTOS COM DETALHES) -->
-        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <span class="text-xs font-extrabold text-[#07133A] uppercase tracking-wider block">
-                🚪 2. Cômodos / Ambientes Vistoriados &amp; Fotos Identificadas
-              </span>
-              <span class="text-[11px] text-slate-500">
-                Toque nos cômodos abaixo para adicionar rapidamente igual ao modelo da Rua Rubens de Mello Souza. Em cada cômodo você marca os reparos e anexa as fotos daquele ambiente!
-              </span>
-            </div>
-          </div>
-
-          <!-- Barra de Botões de 1 Toque para Adicionar Cômodos do Imóvel -->
-          <div id="quickRoomChipsBar" class="flex items-center gap-1.5 overflow-x-auto pb-1.5"></div>
-
-          <!-- Adicionar Cômodo Personalizado -->
-          <div class="flex items-center gap-2">
-            <input id="customRoomNameInput" type="text" placeholder="Ou digite outro ambiente (Ex: Quarto 3, Edícula, Telhado, Piscina...)" class="flex-1 px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none" />
-            <button type="button" id="btnAddCustomRoom" class="px-3.5 py-2 rounded-xl bg-[#07133A] text-white text-xs font-extrabold shrink-0">
-              + Criar Cômodo
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button type="button" data-goto-wizard-step="2" class="sm:col-span-2 touch-btn w-full bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-black rounded-2xl py-4 px-5 shadow-md flex items-center justify-center gap-2 text-sm">
+              <span>Ir p/ Etapa 2: Cômodos &amp; Fotos</span>
+              <span>➔</span>
+            </button>
+            <button type="button" data-goto-wizard-step="3" class="touch-btn w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 border border-amber-300 font-extrabold rounded-2xl py-3.5 px-4 text-xs flex items-center justify-center gap-1">
+              <span>⏭️ Pular p/ Valores</span>
             </button>
           </div>
-
-          <!-- Lista de Cômodos Ativos neste Imóvel -->
-          <div id="roomsEditorContainer" class="space-y-3"></div>
         </div>
 
-        <!-- 3. MOTOR DE EQUIVALÊNCIA HISTÓRICA (INTRANET SHEETS + GEMINI 2.5) -->
-        <div id="equivalenceIntelligenceBox" class="bg-gradient-to-r from-amber-50 to-orange-50/70 p-3.5 rounded-2xl border border-amber-300 space-y-2">
-          <div class="flex items-center justify-between gap-2 flex-wrap">
+        <!-- ============================================================== -->
+        <!-- PASSO 2: CÔMODOS, REPAROS E FOTOS (EM SANFONAS COMPACTAS!)     -->
+        <!-- ============================================================== -->
+        <div id="wizardStep2" class="hidden space-y-4">
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
+            <div>
+              <span class="text-xs font-extrabold text-[#07133A] uppercase tracking-wider block">
+                🚪 Passo 2 de 3 — Cômodos Vistoriados &amp; Fotos
+              </span>
+              <span class="text-xs text-slate-600 block mt-0.5">
+                Toque em um cômodo abaixo para adicionar. Cada cômodo abre individualmente para a tela nunca ficar longa!
+              </span>
+            </div>
+
+            <!-- Botões de Cômodos em Grade que NÃO trava a rolagem vertical -->
+            <div id="quickRoomChipsBar" class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 bg-white rounded-xl border border-slate-200"></div>
+
+            <!-- Adicionar Cômodo Personalizado -->
             <div class="flex items-center gap-2">
-              <span class="text-lg">💡</span>
-              <div>
-                <span class="text-xs font-extrabold text-amber-950 uppercase block">
-                  Prévia Inteligente por Equivalência (Histórico de Orçamentos Tot@l Service)
-                </span>
-                <span id="equivalenceSummaryText" class="text-[11px] text-amber-900 font-medium block">
-                  Adicione itens nos cômodos acima para calcular a prévia automática de Material e Mão de Obra com base nos últimos orçamentos.
-                </span>
+              <input id="customRoomNameInput" type="text" placeholder="Outro cômodo (Ex: Quarto 3, Edícula, Telhado...)" class="flex-1 px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none" />
+              <button type="button" id="btnAddCustomRoom" class="px-3.5 py-2.5 rounded-xl bg-[#07133A] text-white text-xs font-extrabold shrink-0">
+                + Criar Cômodo
+              </button>
+            </div>
+
+            <!-- Lista de Cômodos Ativos (Acordeão: 1 aberto por vez) -->
+            <div id="roomsEditorContainer" class="space-y-2.5"></div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" data-goto-wizard-step="1" class="touch-btn col-span-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-extrabold rounded-2xl py-3.5 px-3 text-xs">
+              ⬅ Voltar
+            </button>
+            <button type="button" data-goto-wizard-step="3" class="touch-btn col-span-2 bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-black rounded-2xl py-3.5 px-4 shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm">
+              <span>Próxima Etapa: 3. Valores &amp; Salvar ➔</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- PASSO 3: EQUIVALÊNCIA, VALORES E BOTÃO GIGANTE DE CONCLUIR     -->
+        <!-- ============================================================== -->
+        <div id="wizardStep3" class="hidden space-y-4">
+          <!-- Motor de Equivalência Histórica -->
+          <div id="equivalenceIntelligenceBox" class="bg-gradient-to-r from-amber-50 to-orange-50/70 p-3.5 rounded-2xl border border-amber-300 space-y-2.5">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">💡</span>
+                <div>
+                  <span class="text-xs font-extrabold text-amber-950 uppercase block">
+                    Sugestão Automática de Preço (Histórico Tot@l Service)
+                  </span>
+                  <span id="equivalenceSummaryText" class="text-xs text-amber-900 font-medium block mt-0.5">
+                    Calculando equivalência de Material e Mão de Obra...
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
+                <button type="button" id="btnApplyEquivalencePrices" class="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-2xs">
+                  ⚡ Preencher c/ Sugestão
+                </button>
+                <button type="button" id="btnAskGeminiEquivalence" class="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] text-xs font-extrabold shadow-2xs">
+                  🤖 Parecer IA Gemini
+                </button>
               </div>
             </div>
-            <div class="flex items-center gap-1.5">
-              <button type="button" id="btnApplyEquivalencePrices" class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-extrabold shadow-2xs">
-                ⚡ Usar Prévia nos Valores
+            <div id="geminiAiResponseBox" class="hidden bg-white/90 p-3 rounded-xl border border-amber-200 text-xs text-slate-800 space-y-1"></div>
+          </div>
+
+          <!-- Fechamento de Valores -->
+          <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3.5">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <span class="text-xs font-extrabold text-[#07133A] uppercase tracking-wider">
+                💰 Passo 3 de 3 — Fechamento de Valores &amp; Conclusão
+              </span>
+              <span id="sumOfIndividualItemsBadge" class="text-xs font-bold text-slate-600">
+                Soma dos itens: R$ 0,00
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="bg-white p-3 rounded-xl border border-slate-300">
+                <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">
+                  🧱 Valor Material (R$) <span class="text-[10px] font-normal text-slate-400">(Camila)</span>
+                </label>
+                <input id="jobValorMaterial" type="number" step="0.01" placeholder="0,00" class="w-full px-3 py-2.5 rounded-lg border border-slate-300 font-extrabold text-slate-900 text-right outline-none focus:border-[#07133A]" />
+              </div>
+
+              <div class="bg-amber-50/70 p-3 rounded-xl border-2 border-amber-400">
+                <label class="block text-xs font-extrabold text-amber-950 uppercase mb-1">
+                  👷 Mão de Obra (R$) <span class="text-[10px] font-normal text-amber-800">(Marcelo)</span>
+                </label>
+                <input id="jobValorMaoDeObra" type="number" step="0.01" placeholder="0,00" class="w-full px-3 py-2.5 rounded-lg border border-amber-400 bg-white font-extrabold text-amber-950 text-right outline-none focus:border-[#07133A]" />
+              </div>
+
+              <div class="bg-[#07133A] text-white p-3 rounded-xl">
+                <label class="block text-xs font-extrabold text-[#DFC48B] uppercase mb-1">
+                  ⭐ VALOR TOTAL (R$)
+                </label>
+                <input id="jobValorTotal" type="number" step="0.01" placeholder="0,00" class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-900 font-black text-[#DFC48B] text-right outline-none" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">OBS / Ressalvas Técnicas no PDF (Opcional)</label>
+              <textarea id="jobObsRessalvas" rows="2" placeholder="Ex: neste orçamento não tem a pintura das partes infiltradas e também não tem a reposição das molduras de gesso" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs outline-none"></textarea>
+            </div>
+          </div>
+
+          <!-- BOTÕES FINAIS GRANDES E CLAROS -->
+          <div class="space-y-2.5 pt-1">
+            <div id="editorButtonsMarcelo" class="hidden flex-col sm:flex-row gap-2.5">
+              <button type="button" id="btnMarceloFinishSurvey" class="touch-btn flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl py-4 px-4 shadow-lg flex items-center justify-center gap-2 text-sm">
+                ✅ CONCLUIR MINHA VISTORIA E ENVIAR P/ CAMILA
               </button>
-              <button type="button" id="btnAskGeminiEquivalence" class="px-3 py-1.5 rounded-xl bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] text-[11px] font-extrabold shadow-2xs">
-                🤖 Analisar c/ IA Gemini 2.5
+              <button type="button" id="btnMarceloSendWhatsToCamila" class="touch-btn px-4 py-3.5 rounded-2xl bg-slate-800 text-white font-bold text-xs">
+                📲 Concluir e Avisar no Whats
               </button>
             </div>
-          </div>
-          <div id="geminiAiResponseBox" class="hidden bg-white/90 p-3 rounded-xl border border-amber-200 text-xs text-slate-800 space-y-1"></div>
-        </div>
 
-        <!-- 4. FECHAMENTO DE VALORES: MATERIAL + MÃO DE OBRA (MARCELO) + TOTAL (CAMILA) -->
-        <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3">
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <span class="text-xs font-extrabold text-[#07133A] uppercase tracking-wider">
-              💰 3. Valores do Orçamento (Material Separado da Mão de Obra)
-            </span>
-            <span id="sumOfIndividualItemsBadge" class="text-[11px] font-bold text-slate-500">
-              Soma dos itens individuais: R$ 0,00
-            </span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <!-- Valor do Material (Camila) -->
-            <div class="bg-white p-3 rounded-xl border border-slate-200">
-              <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">
-                🧱 Valor Material (R$) <span class="text-[10px] font-normal text-slate-400">(Camila)</span>
-              </label>
-              <input id="jobValorMaterial" type="number" step="0.01" placeholder="Ex: 31780.00" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-extrabold text-slate-900 text-right outline-none focus:border-[#07133A]" />
+            <div id="editorButtonsCamila" class="flex flex-col sm:flex-row gap-2.5">
+              <button type="button" id="btnCamilaSaveAndGeneratePdf" class="touch-btn flex-1 bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-black rounded-2xl py-4 px-5 shadow-lg flex items-center justify-center gap-2 text-sm">
+                📄 CONCLUIR, SALVAR &amp; BAIXAR PDF AGORA
+              </button>
+              <button type="submit" class="touch-btn flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl py-4 px-5 shadow-md flex items-center justify-center gap-2 text-sm">
+                ✅ CONCLUIR E SALVAR ORÇAMENTO
+              </button>
             </div>
 
-            <!-- Valor da Mão de Obra (Marcelo passa / Camila ajusta) -->
-            <div class="bg-amber-50/60 p-3 rounded-xl border border-amber-300">
-              <label class="block text-[11px] font-extrabold text-amber-950 uppercase mb-1">
-                👷 Valor Mão de Obra (R$) <span class="text-[10px] font-normal text-amber-800">(Marcelo)</span>
-              </label>
-              <input id="jobValorMaoDeObra" type="number" step="0.01" placeholder="Ex: 17000.00" class="w-full px-3 py-2 rounded-lg border border-amber-400 bg-white font-extrabold text-amber-950 text-right outline-none focus:border-[#07133A]" />
-            </div>
-
-            <!-- Valor Total do Orçamento (Soma automática ou digitado) -->
-            <div class="bg-[#07133A] text-white p-3 rounded-xl">
-              <label class="block text-[11px] font-extrabold text-[#DFC48B] uppercase mb-1">
-                ⭐ VALOR TOTAL (R$)
-              </label>
-              <input id="jobValorTotal" type="number" step="0.01" placeholder="Ex: 48780.00" class="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-900 font-black text-[#DFC48B] text-right outline-none" />
-            </div>
+            <button type="button" data-goto-wizard-step="2" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs text-center">
+              ⬅ Voltar para revisar Cômodos &amp; Fotos
+            </button>
           </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">OBS / Ressalvas Técnicas no PDF (Opcional)</label>
-            <textarea id="jobObsRessalvas" rows="2" placeholder="Ex: neste orçamento não tem a pintura das partes infiltradas e também não tem a reposição das molduras de gesso" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs outline-none"></textarea>
-          </div>
-        </div>
-
-        <!-- BOTÕES DE SALVAMENTO DIFERENCIADOS PARA O MARCELO E PARA A CAMILA -->
-        <div id="editorButtonsMarcelo" class="hidden flex-wrap gap-2 pt-2">
-          <button type="button" id="btnMarceloFinishSurvey" class="touch-btn flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl py-3.5 px-4 shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm">
-            ✅ Concluir Minha Parte (Fotos + Mão de Obra) e Liberar p/ Camila
-          </button>
-          <button type="button" id="btnMarceloSendWhatsToCamila" class="touch-btn px-4 py-3.5 rounded-2xl bg-slate-800 text-white font-bold text-xs">
-            📲 Avisar Camila no Whats
-          </button>
-        </div>
-
-        <div id="editorButtonsCamila" class="flex flex-wrap gap-2 pt-2">
-          <button type="submit" class="touch-btn flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl py-3.5 px-4 shadow-sm flex items-center justify-center gap-2 text-xs sm:text-sm">
-            💾 Salvar Orçamento
-          </button>
-          <button type="button" id="btnCamilaSaveAndGeneratePdf" class="touch-btn flex-1 bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-black rounded-2xl py-3.5 px-4 shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm">
-            📄 Aprovar &amp; Baixar PDF Agora
-          </button>
         </div>
       </form>
     </section>
@@ -777,6 +894,135 @@
         <button type="button" id="btnRunImportImob" class="touch-btn w-full bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-black rounded-2xl py-3 text-xs shadow-md">
           ✨ Extrair Dados e Preencher Orçamento Agora
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================== -->
+  <!-- MODAL: EXCLUIR CLIENTE / ORÇAMENTO E APAGAR PASTAS DO GOOGLE DRIVE       -->
+  <!-- ======================================================================== -->
+  <div id="modalDeleteConfirm" class="fixed inset-0 z-50 hidden bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+    <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl border-2 border-rose-200 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🗑️</span>
+          <div>
+            <h3 class="text-base font-black text-rose-950">Excluir Registro &amp; Pastas do Drive</h3>
+            <p class="text-[11px] text-slate-500">Proteção de Segurança Tot@l Service</p>
+          </div>
+        </div>
+        <button type="button" data-close-modal="modalDeleteConfirm" class="p-2 rounded-xl bg-slate-100 text-slate-600 font-bold">✕</button>
+      </div>
+
+      <input type="hidden" id="deleteTargetJobId" value="" />
+
+      <div class="bg-rose-50 p-3.5 rounded-2xl border border-rose-200 space-y-1">
+        <span class="text-[10px] font-extrabold text-rose-800 uppercase block">Imóvel / Cliente selecionado para exclusão:</span>
+        <p id="deleteTargetJobTitle" class="text-sm font-black text-slate-900">Imóvel</p>
+        <p class="text-xs text-rose-900 pt-1">
+          Isso removerá o orçamento do sistema, da planilha Google Sheets e também enviará o comando para <b>apagar as pastas e fotos deste atendimento no Google Drive</b>.
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-xs font-extrabold text-slate-800 mb-1">
+          🔒 Digite a Senha Master da Camila para confirmar *
+        </label>
+        <input id="deleteMasterPasswordInput" type="password" placeholder="Senha da Camila (Ex: 222110F)" class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-300 bg-slate-50 focus:bg-white focus:border-rose-600 font-extrabold text-slate-900 outline-none" />
+        <p id="deletePasswordError" class="hidden text-xs font-extrabold text-rose-600 mt-1.5">
+          Senha incorreta! Digite a senha Master da Camila (222110F).
+        </p>
+      </div>
+
+      <div class="flex gap-2 pt-1">
+        <button type="button" data-close-modal="modalDeleteConfirm" class="touch-btn flex-1 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs">
+          Cancelar
+        </button>
+        <button type="button" id="btnConfirmPermanentDelete" class="touch-btn flex-1 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md">
+          🗑️ Apagar do Sistema &amp; Drive
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================== -->
+  <!-- MODAL: AGENDAR VISITA / OBRA (GOOGLE AGENDA + APPLE/iOS + LEMBRETES)     -->
+  <!-- ======================================================================== -->
+  <div id="modalScheduleCalendar" class="fixed inset-0 z-50 hidden bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-5 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📅</span>
+          <div>
+            <h3 class="text-base font-black text-slate-900">Agendar ou Reservar c/ Alerta</h3>
+            <p class="text-[11px] text-slate-500">Conecta direto ao Google Agenda ou Calendário do iPhone (Apple)</p>
+          </div>
+        </div>
+        <button type="button" data-close-modal="modalScheduleCalendar" class="p-2 rounded-xl bg-slate-100 text-slate-600 font-bold">✕</button>
+      </div>
+
+      <input type="hidden" id="schedTargetJobId" value="" />
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-extrabold text-slate-700 mb-1">Tipo de Compromisso</label>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button type="button" data-sched-type="VISTORIA" class="sched-type-btn py-2.5 px-2 rounded-xl text-xs font-black bg-[#07133A] text-[#DFC48B]">
+              📸 Vistoria
+            </button>
+            <button type="button" data-sched-type="RESERVA" class="sched-type-btn py-2.5 px-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700">
+              📌 Reserva Data
+            </button>
+            <button type="button" data-sched-type="INICIO_OBRA" class="sched-type-btn py-2.5 px-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700">
+              🛠️ Início de Obra
+            </button>
+          </div>
+          <input type="hidden" id="schedTypeValue" value="VISTORIA" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Data *</label>
+            <input id="schedDateInput" type="date" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Horário *</label>
+            <input id="schedTimeInput" type="time" value="09:00" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold outline-none" />
+          </div>
+        </div>
+
+        <!-- Escolha de quando receber o aviso (Por Minuto, Por Hora ou Por Dia) -->
+        <div class="bg-amber-50 p-3.5 rounded-2xl border border-amber-300 space-y-2">
+          <label class="block text-xs font-extrabold text-amber-950 uppercase">
+            🔔 Quando você quer receber o Aviso / Alerta?
+          </label>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button type="button" data-sched-alert="15" class="sched-alert-btn py-2 px-2 rounded-xl text-xs font-extrabold bg-amber-500 text-slate-950">
+              ⏱️ 15 Minutos antes
+            </button>
+            <button type="button" data-sched-alert="60" class="sched-alert-btn py-2 px-2 rounded-xl text-xs font-bold bg-white text-amber-950 border border-amber-300">
+              🕐 1 Hora antes
+            </button>
+            <button type="button" data-sched-alert="1440" class="sched-alert-btn py-2 px-2 rounded-xl text-xs font-bold bg-white text-amber-950 border border-amber-300">
+              📆 1 Dia antes (24h)
+            </button>
+          </div>
+          <input type="hidden" id="schedAlertMinutes" value="15" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Descrição do que será feito + Links do App</label>
+          <textarea id="schedDescriptionInput" rows="4" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs outline-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          <button type="button" id="btnAddGoogleCalendar" class="touch-btn bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-black rounded-2xl py-3.5 px-4 text-xs flex items-center justify-center gap-2 shadow-md">
+            <span>📅 Salvar no Google Agenda</span>
+          </button>
+          <button type="button" id="btnDownloadAppleIcs" class="touch-btn bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl py-3.5 px-4 text-xs flex items-center justify-center gap-2 shadow-md">
+            <span>🍎 Agenda iPhone / Apple (.ics)</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1051,9 +1297,53 @@
     let priceHistoryCatalog = [...DEFAULT_PRICE_HISTORY];
     let offlineQueue = [];
 
-    // Estado temporário do Editor de Cômodos
+    // Estado temporário do Editor de Cômodos + Passo do Assistente + Cômodo Expandido
     let tempEditorComodos = [];
     let shouldGeneratePdfAfterSave = false;
+    let currentWizardStep = 1;
+    let activeExpandedRoomId = null;
+
+    function setEditorWizardStep(stepNum) {
+      const target = Number(stepNum);
+      currentWizardStep = isNaN(target) ? 1 : target;
+
+      if (currentWizardStep === 0) {
+        // Modo "Tudo Junto": mostra as 3 etapas na mesma tela para quem quiser preencher direto
+        [1, 2, 3].forEach(n => {
+          const panel = document.getElementById("wizardStep" + n);
+          if (panel) panel.classList.remove("hidden");
+        });
+      } else {
+        [1, 2, 3].forEach(n => {
+          const panel = document.getElementById("wizardStep" + n);
+          if (panel) panel.classList.toggle("hidden", n !== currentWizardStep);
+        });
+      }
+
+      document.querySelectorAll("[data-wizard-step-btn]").forEach(btn => {
+        const bStep = Number(btn.getAttribute("data-wizard-step-btn"));
+        if (bStep === currentWizardStep) {
+          btn.className = "wizard-step-tab py-3 px-2 rounded-xl text-xs font-black bg-[#07133A] text-[#DFC48B] shadow-xs transition text-center";
+        } else if (currentWizardStep > 0 && bStep > 0 && bStep < currentWizardStep) {
+          btn.className = "wizard-step-tab py-3 px-2 rounded-xl text-xs font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300 transition text-center";
+        } else {
+          btn.className = "wizard-step-tab py-3 px-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-white/60 transition text-center";
+        }
+      });
+
+      recalcEditorItemSums();
+      computeCurrentEditorEquivalence();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function toggleMainViewForEditor(isEditorOpen) {
+      const sec = document.getElementById("editorSection");
+      if (sec) sec.classList.toggle("hidden", !isEditorOpen);
+      const jobsEl = document.getElementById("jobsListContainer");
+      if (jobsEl) jobsEl.classList.toggle("hidden", isEditorOpen);
+      const dock = document.getElementById("bottomDockNav");
+      if (dock) dock.classList.toggle("hidden", isEditorOpen);
+    }
 
     function safeStorageGet(key, fallback) {
       try {
@@ -1417,6 +1707,447 @@
       return { totalItems, estMat, estMao };
     }
 
+    // =========================================================================
+    // BUSCA INTELIGENTE DE RUAS TOLERANTE A ERROS DE DIGITAÇÃO (FUZZY MATCH)
+    // =========================================================================
+    function levenshteinDistance(a, b) {
+      const m = a.length, n = b.length;
+      if (m === 0) return n;
+      if (n === 0) return m;
+      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+        }
+      }
+      return dp[m][n];
+    }
+
+    function getAllKnownAddressesPool() {
+      const pool = new Map();
+      const addAddr = (addr, cliente, extraInfo) => {
+        const clean = String(addr || "").trim();
+        if (!clean || clean.toLowerCase().includes("rascunho")) return;
+        const k = normalizeAddress(clean);
+        if (!k) return;
+        if (!pool.has(k)) {
+          pool.set(k, { address: clean, cliente: cliente || "Particular", count: 1, extraInfo: extraInfo || "" });
+        } else {
+          pool.get(k).count++;
+        }
+      };
+
+      addAddr("RUA RUBENS DE MELLO SOUZA 7-65", "Particular", "Histórico completo (19 ambientes)");
+      addAddr("Rua Pedro Fernandes 10-19", "Imobiliária Grizoni", "Telhado, caixa d'água e vazamentos");
+      clientesImoveisCatalog.forEach(c => addAddr(c.imovel || c.endereco, c.cliente || c.imobiliaria, "Cadastro Planilha"));
+      jobsList.forEach(j => {
+        if (j.statusEngrenagem !== "RASCUNHO") {
+          addAddr(j.imovel, j.clienteOuImobiliaria, formatCurrencyBr(j.valorTotal));
+        }
+      });
+      return Array.from(pool.values());
+    }
+
+    function findFuzzyAddresses(query) {
+      const qNorm = normalizeAddress(query);
+      if (!qNorm || qNorm.length < 2) return [];
+      const qTokens = qNorm.split(" ").filter(t => t.length >= 2 && t !== "rua" && t !== "avenida");
+      const candidates = getAllKnownAddressesPool();
+
+      const scored = candidates.map(item => {
+        const aNorm = normalizeAddress(item.address);
+        if (aNorm.includes(qNorm)) {
+          return { ...item, score: 100 };
+        }
+        const aTokens = aNorm.split(" ").filter(t => t.length >= 2);
+        let tokenMatches = 0;
+        qTokens.forEach(qt => {
+          let bestDist = 99;
+          aTokens.forEach(at => {
+            if (at.includes(qt) || qt.includes(at)) bestDist = 0;
+            else bestDist = Math.min(bestDist, levenshteinDistance(qt, at));
+          });
+          const maxAllowed = qt.length <= 4 ? 1 : 2;
+          if (bestDist <= maxAllowed) tokenMatches++;
+        });
+        const ratio = qTokens.length > 0 ? (tokenMatches / qTokens.length) : 0;
+        const fullDist = levenshteinDistance(qNorm, aNorm.slice(0, qNorm.length + 3));
+        const score = Math.round(ratio * 85) - fullDist;
+        return { ...item, score };
+      });
+
+      return scored.filter(s => s.score >= 30).sort((a, b) => b.score - a.score).slice(0, 5);
+    }
+
+    function renderFuzzyDropdown(inputEl, dropdownId, onSelectCallback) {
+      const drop = document.getElementById(dropdownId);
+      if (!drop || !inputEl) return;
+      const val = inputEl.value.trim();
+      const matches = findFuzzyAddresses(val);
+
+      if (!matches.length || (matches.length === 1 && normalizeAddress(matches[0].address) === normalizeAddress(val))) {
+        drop.classList.add("hidden");
+        return;
+      }
+
+      drop.classList.remove("hidden");
+      drop.innerHTML = matches.map(m => `
+        <button type="button" data-fuzzy-pick="${escapeHtml(m.address)}" data-fuzzy-client="${escapeHtml(m.cliente)}" class="w-full px-3.5 py-2.5 text-left hover:bg-indigo-50 flex items-center justify-between gap-2 transition">
+          <div class="min-w-0">
+            <span class="text-xs font-black text-[#07133A] block truncate">📍 ${escapeHtml(m.address)}</span>
+            <span class="text-[10px] font-bold text-slate-500 block">${escapeHtml(m.cliente)} ${m.extraInfo ? "• " + escapeHtml(m.extraInfo) : ""}</span>
+          </div>
+          <span class="px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-900 text-[10px] font-extrabold shrink-0">Usar ↵</span>
+        </button>
+      `).join("");
+
+      drop.querySelectorAll("[data-fuzzy-pick]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const pickedAddr = btn.getAttribute("data-fuzzy-pick");
+          const pickedClient = btn.getAttribute("data-fuzzy-client");
+          inputEl.value = pickedAddr;
+          drop.classList.add("hidden");
+          if (onSelectCallback) onSelectCallback(pickedAddr, pickedClient);
+        });
+      });
+    }
+
+    // =========================================================================
+    // EXCLUSÃO SEGURA (EXIGE SENHA MASTER DA CAMILA + APAGA DO GOOGLE DRIVE)
+    // =========================================================================
+    function openDeleteConfirmModal(jobId) {
+      const job = jobsList.find(j => j.id === jobId);
+      if (!job) return;
+      document.getElementById("deleteTargetJobId").value = job.id;
+      document.getElementById("deleteTargetJobTitle").textContent = `${job.imovel} (${job.clienteOuImobiliaria || "Particular"})`;
+      document.getElementById("deleteMasterPasswordInput").value = "";
+      document.getElementById("deletePasswordError").classList.add("hidden");
+      openModal("modalDeleteConfirm");
+      setTimeout(() => document.getElementById("deleteMasterPasswordInput")?.focus(), 120);
+    }
+
+    async function executePermanentDeleteWithPassword() {
+      const jobId = document.getElementById("deleteTargetJobId").value;
+      const typedPass = (document.getElementById("deleteMasterPasswordInput").value || "").trim();
+      const masterPass = (appSettings.camilaPass || "222110F").trim();
+      const errEl = document.getElementById("deletePasswordError");
+
+      if (!typedPass || (typedPass.toUpperCase() !== masterPass.toUpperCase() && typedPass.toUpperCase() !== "222110F")) {
+        errEl.classList.remove("hidden");
+        showToast("Senha incorreta! Digite a senha da Camila.", "warning");
+        return;
+      }
+
+      errEl.classList.add("hidden");
+      const job = jobsList.find(j => j.id === jobId);
+      jobsList = jobsList.filter(j => j.id !== jobId);
+      offlineQueue = offlineQueue.filter(q => q.record?.id !== jobId);
+      safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
+      safeStorageSet(STORAGE_KEYS.QUEUE, offlineQueue);
+
+      closeModal("modalDeleteConfirm");
+      renderJobsList();
+      showToast("🗑️ Registro excluído! Apagando pastas de teste no Google Drive...", "info");
+
+      const gasUrl = getGasUrl();
+      if (gasUrl && job) {
+        const extractDriveId = (url) => {
+          const m = String(url || "").match(/[-\w]{25,}/);
+          return m ? m[0] : "";
+        };
+        const payload = {
+          action: "deleteRecordAndFolders",
+          deleteRecord: true,
+          id: job.id,
+          imovel: job.imovel,
+          clienteOuImobiliaria: job.clienteOuImobiliaria,
+          propertyFolderUrl: job.propertyFolderUrl || "",
+          attendanceFolderUrl: job.attendanceFolderUrl || "",
+          propertyFolderId: extractDriveId(job.propertyFolderUrl),
+          attendanceFolderId: extractDriveId(job.attendanceFolderUrl),
+          record: { ...job, _deleted: true, statusEngrenagem: "EXCLUIDO" }
+        };
+
+        try {
+          await fetch(gasUrl, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+          });
+          showToast("✅ Excluído do sistema, planilha e comando enviado ao Google Drive!", "success");
+        } catch (e) {
+          offlineQueue.push({
+            id: "Q-DEL-" + Date.now(),
+            action: "deleteRecordAndFolders",
+            record: payload.record
+          });
+          safeStorageSet(STORAGE_KEYS.QUEUE, offlineQueue);
+        }
+      }
+    }
+
+    // =========================================================================
+    // RASTREADOR GPS DE CHEGADA E CRONÔMETRO DE PERMANÊNCIA + EFICIÊNCIA IA
+    // =========================================================================
+    let activeVisitState = null;
+    let visitTimerInterval = null;
+    let geoWatchId = null;
+
+    function startGpsVisitTracking(jobId) {
+      const job = jobsList.find(j => j.id === jobId);
+      if (!job) return;
+
+      activeVisitState = {
+        jobId: job.id,
+        imovel: job.imovel,
+        routeStartedAt: Date.now(),
+        arrivedAt: null,
+        initialGeoloc: null
+      };
+      safeStorageSet("total_service_active_visit_v5", activeVisitState);
+      renderActiveVisitBanner();
+
+      // Monitora retorno do Waze/Maps ou deslocamento pelo GPS
+      if ("geolocation" in navigator) {
+        try {
+          if (geoWatchId) navigator.geolocation.clearWatch(geoWatchId);
+          geoWatchId = navigator.geolocation.watchPosition((pos) => {
+            if (!activeVisitState) return;
+            if (!activeVisitState.initialGeoloc) {
+              activeVisitState.initialGeoloc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            } else if (!activeVisitState.arrivedAt && (Date.now() - activeVisitState.routeStartedAt > 20000)) {
+              confirmVisitArrival(true);
+            }
+          }, () => {}, { enableHighAccuracy: true, maximumAge: 10000 });
+        } catch (e) {}
+      }
+    }
+
+    function confirmVisitArrival(autoDetected = false) {
+      if (!activeVisitState) return;
+      if (!activeVisitState.arrivedAt) {
+        activeVisitState.arrivedAt = Date.now();
+        safeStorageSet("total_service_active_visit_v5", activeVisitState);
+        showToast(autoDetected ? "📍 Chegada ao imóvel detectada! Cronômetro iniciado." : "📍 Chegada confirmada! Contando tempo no local.", "success");
+      }
+      renderActiveVisitBanner();
+    }
+
+    function renderActiveVisitBanner() {
+      const banner = document.getElementById("activeVisitTimerBanner");
+      if (!banner) return;
+      if (!activeVisitState) {
+        banner.classList.add("hidden");
+        if (visitTimerInterval) clearInterval(visitTimerInterval);
+        return;
+      }
+
+      banner.classList.remove("hidden");
+      document.getElementById("visitTimerAddressTitle").textContent = activeVisitState.imovel;
+      const badge = document.getElementById("visitTimerStatusBadge");
+      const sub = document.getElementById("visitTimerSubtext");
+      const btnArr = document.getElementById("btnConfirmArrivalNow");
+
+      if (activeVisitState.arrivedAt) {
+        badge.textContent = "🟢 VOCÊ ESTÁ NO IMÓVEL • CRONÔMETRO ATIVO";
+        sub.textContent = "Registrando tempo de vistoria, fotos e cômodos para análise de eficiência.";
+        if (btnArr) btnArr.classList.add("hidden");
+      } else {
+        badge.textContent = "🚗 ROTA GPS INICIADA (WAZE / MAPS)";
+        sub.textContent = "Assim que chegar no endereço, toque em 'Confirmar Chegada' (ou volte ao app após estacionar).";
+        if (btnArr) btnArr.classList.remove("hidden");
+      }
+
+      if (visitTimerInterval) clearInterval(visitTimerInterval);
+      const updateClock = () => {
+        if (!activeVisitState) return;
+        const ref = activeVisitState.arrivedAt || activeVisitState.routeStartedAt;
+        const sec = Math.max(0, Math.floor((Date.now() - ref) / 1000));
+        const mm = String(Math.floor(sec / 60)).padStart(2, "0");
+        const ss = String(sec % 60).padStart(2, "0");
+        const clk = document.getElementById("visitTimerClockDisplay");
+        if (clk) clk.textContent = `${mm}:${ss}`;
+      };
+      updateClock();
+      visitTimerInterval = setInterval(updateClock, 1000);
+    }
+
+    async function finishVisitTimerAndAnalyzeEfficiency() {
+      if (!activeVisitState) return;
+      const job = jobsList.find(j => j.id === activeVisitState.jobId);
+      const refStart = activeVisitState.arrivedAt || activeVisitState.routeStartedAt;
+      const elapsedMinutes = Math.max(1, Math.round((Date.now() - refStart) / 60000));
+
+      if (geoWatchId && "geolocation" in navigator) {
+        navigator.geolocation.clearWatch(geoWatchId);
+        geoWatchId = null;
+      }
+
+      activeVisitState = null;
+      localStorage.removeItem("total_service_active_visit_v5");
+      renderActiveVisitBanner();
+
+      if (!job) return;
+      job.tempoPermanenciaMinutos = (Number(job.tempoPermanenciaMinutos) || 0) + elapsedMinutes;
+      job.ultimaVisitaRegistradaEm = new Date().toLocaleString("pt-BR");
+      saveJobsAndSync(job);
+
+      const roomsCount = (job.comodos || []).length;
+      const photosCount = (job.comodos || []).reduce((acc, r) => acc + (r.fotos || []).length, 0);
+      const itemsCount = (job.comodos || []).reduce((acc, r) => acc + (r.itens || []).length, 0);
+      const minPerRoom = roomsCount > 0 ? (job.tempoPermanenciaMinutos / roomsCount).toFixed(1) : job.tempoPermanenciaMinutos;
+
+      const box = document.getElementById("aiTimeEfficiencyBox");
+      const content = document.getElementById("aiTimeEfficiencyContent");
+      if (box && content) {
+        box.classList.remove("hidden");
+        let baseDiag = `• Imóvel: ${job.imovel}
+• Tempo total registrado no local: ${job.tempoPermanenciaMinutos} min (${minPerRoom} min por cômodo)
+• Produção na visita: ${roomsCount} cômodo(s), ${itemsCount} reparo(s) apontados e ${photosCount} foto(s).
+`;
+        if (Number(minPerRoom) > 6 || (photosCount > 0 && job.tempoPermanenciaMinutos / photosCount > 4)) {
+          baseDiag += `💡 Sugestão de Eficiência: O tempo por foto/cômodo ficou acima da média. Use os botões rápidos de reparo de 1 toque e deixe a opção '✨ Descrever fotos automaticamente com IA' ligada para reduzir o tempo de vistoria pela metade!`;
+        } else {
+          baseDiag += `✅ Excelente ritmo de vistoria! O tempo por ambiente está ágil e dentro da meta operacional da Tot@l Service.`;
+        }
+        content.textContent = baseDiag;
+
+        if (getGeminiApiKey()) {
+          try {
+            const prompt = `Analise em 3 linhas curtas a eficiência de tempo desta vistoria no imóvel "${job.imovel}":
+Tempo gasto no local: ${job.tempoPermanenciaMinutos} minutos | Cômodos vistoriados: ${roomsCount} | Reparos anotados: ${itemsCount} | Fotos tiradas: ${photosCount}.
+Dê uma dica prática para o Marcelo e a Camila ganharem ainda mais tempo na próxima visita.`;
+            const aiTip = await callInternalGemini([{ text: prompt }]);
+            if (aiTip) content.textContent = baseDiag + "\n\n🤖 Dica da IA Interna:\n" + aiTip;
+          } catch (e) {}
+        }
+      }
+    }
+
+    // =========================================================================
+    // CONEXÃO COM GOOGLE AGENDA E APPLE CALENDAR (.ICS) + LEMBRETES
+    // =========================================================================
+    function openScheduleCalendarModal(jobId) {
+      const job = jobsList.find(j => j.id === jobId);
+      if (!job) return;
+
+      document.getElementById("schedTargetJobId").value = job.id;
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+      document.getElementById("schedDateInput").value = tomorrow;
+      document.getElementById("schedTimeInput").value = "09:00";
+
+      updateScheduleDescriptionPreview(job, "VISTORIA", "15");
+      openModal("modalScheduleCalendar");
+    }
+
+    function updateScheduleDescriptionPreview(job, tipo, alertMins) {
+      if (!job) return;
+      const appUrl = window.location.href.split("#")[0];
+      const resumoComodos = (job.comodos || []).map(c => `- ${c.nome}: ${(c.itens || []).map(i => i.descricao).join(", ")}`).join("\n");
+      const alertLabel = alertMins === "1440" ? "1 dia antes" : (alertMins === "60" ? "1 hora antes" : "15 minutos antes");
+
+      const desc = `[TOT@L SERVICE — ${tipo}]
+🏠 Imóvel: ${job.imovel}
+🏢 Cliente/Imobiliária: ${job.clienteOuImobiliaria || "Particular"}
+📞 Telefone: ${job.telefoneCliente || TELEFONE_MARCELO}
+💰 Valor Orçado: ${formatCurrencyBr(job.valorTotal)}
+🔔 Aviso configurado: ${alertLabel}
+
+🛠️ O que será feito:
+${resumoComodos || job.obsParaMarcelo || "Vistoria técnica e execução de reparos."}
+
+🔗 Link direto do Sistema Tot@l Service:
+${appUrl}
+${job.propertyFolderUrl ? "📁 Pasta Google Drive: " + job.propertyFolderUrl : ""}`;
+
+      const descInput = document.getElementById("schedDescriptionInput");
+      if (descInput) descInput.value = desc.trim();
+    }
+
+    function buildCalendarEventDates() {
+      const dStr = document.getElementById("schedDateInput").value || new Date().toISOString().slice(0, 10);
+      const tStr = document.getElementById("schedTimeInput").value || "09:00";
+      const start = new Date(`${dStr}T${tStr}:00`);
+      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      const fmt = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+      return { start, end, startIso: fmt(start), endIso: fmt(end), dStr, tStr };
+    }
+
+    function saveScheduleOnJobRecord() {
+      const jobId = document.getElementById("schedTargetJobId").value;
+      const job = jobsList.find(j => j.id === jobId);
+      if (!job) return null;
+      const { dStr, tStr } = buildCalendarEventDates();
+      const tipo = document.getElementById("schedTypeValue").value || "VISTORIA";
+      const alertMins = document.getElementById("schedAlertMinutes").value || "15";
+      job.agendamentoDataHora = `${dStr.split("-").reverse().join("/")} às ${tStr} (${tipo})`;
+      job.agendamentoAlertaMinutos = Number(alertMins);
+      saveJobsAndSync(job);
+      return job;
+    }
+
+    function openInGoogleCalendar() {
+      const job = saveScheduleOnJobRecord();
+      if (!job) return;
+      const { startIso, endIso } = buildCalendarEventDates();
+      const tipo = document.getElementById("schedTypeValue").value || "VISTORIA";
+      const title = `Tot@l Service (${tipo}): ${job.imovel}`;
+      const details = document.getElementById("schedDescriptionInput").value;
+      const location = `${job.imovel}, Bauru - SP`;
+
+      const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startIso}/${endIso}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+      window.open(gcalUrl, "_blank");
+      closeModal("modalScheduleCalendar");
+      showToast("📅 Evento aberto no Google Agenda!", "success");
+    }
+
+    function downloadAppleCalendarIcs() {
+      const job = saveScheduleOnJobRecord();
+      if (!job) return;
+      const { startIso, endIso } = buildCalendarEventDates();
+      const tipo = document.getElementById("schedTypeValue").value || "VISTORIA";
+      const alertMins = Number(document.getElementById("schedAlertMinutes").value) || 15;
+      const title = `Tot@l Service (${tipo}): ${job.imovel}`;
+      const details = (document.getElementById("schedDescriptionInput").value || "").replace(/\r?\n/g, "\\n");
+      const location = `${job.imovel}, Bauru - SP`;
+
+      const icsContent = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Total Service//Gestao Bauru//PT-BR",
+        "BEGIN:VEVENT",
+        `UID:totalservice-${job.id}-${Date.now()}@totalservice.app`,
+        `DTSTAMP:${startIso}`,
+        `DTSTART:${startIso}`,
+        `DTEND:${endIso}`,
+        `SUMMARY:${title}`,
+        `DESCRIPTION:${details}`,
+        `LOCATION:${location}`,
+        "BEGIN:VALARM",
+        `TRIGGER:-PT${alertMins}M`,
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Lembrete Tot@l Service: ${title}`,
+        "END:VALARM",
+        "END:VEVENT",
+        "END:VCALENDAR"
+      ].join("\r\n");
+
+      const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Agenda_${sanitizeSimple(job.imovel)}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      closeModal("modalScheduleCalendar");
+      showToast("🍎 Arquivo de Agenda (.ics) gerado com alarme!", "success");
+    }
+
     function normalizeAddress(addr) {
       return String(addr || "")
         .toLowerCase()
@@ -1704,7 +2435,8 @@ ${buildInternalSystemContext()}`;
           updateEditorAddressHistoryAlert();
           scheduleDraftAutoSave();
           closeModal("modalImportImob");
-          showToast("Dados da imobiliária preenchidos no orçamento!", "success");
+          setEditorWizardStep(2);
+          showToast("Dados extraídos! Confira os cômodos no Passo 2.", "success");
         }
       } catch (err) {
         if (text) {
@@ -1907,9 +2639,9 @@ ${buildInternalSystemContext()}`;
       const clean = String(roomName || "").trim().toUpperCase();
       if (!clean) return;
 
-      // Se já existir esse cômodo, rola até ele e adiciona uma linha
       const existing = tempEditorComodos.find(r => r.nome.toUpperCase() === clean);
       if (existing) {
+        activeExpandedRoomId = existing.id;
         existing.itens.push({
           id: "it-" + Date.now() + "-" + Math.random().toString(36).slice(2, 5),
           descricao: "",
@@ -1918,11 +2650,14 @@ ${buildInternalSystemContext()}`;
           valor: ""
         });
         renderRoomsEditor();
+        showToast(`Cômodo ${clean} aberto!`, "info");
         return;
       }
 
+      const newRoomId = "room-" + Date.now() + "-" + Math.random().toString(36).slice(2, 5);
+      activeExpandedRoomId = newRoomId;
       tempEditorComodos.push({
-        id: "room-" + Date.now() + "-" + Math.random().toString(36).slice(2, 5),
+        id: newRoomId,
         nome: clean,
         itens: [
           {
@@ -1936,10 +2671,14 @@ ${buildInternalSystemContext()}`;
         fotos: []
       });
       renderRoomsEditor();
+      scheduleDraftAutoSave();
+      showToast(`+ ${clean} adicionado!`, "success");
     }
 
     function renderRoomsEditor() {
       const container = document.getElementById("roomsEditorContainer");
+      const countBadge = document.getElementById("wizardRoomsCountBadge");
+      if (countBadge) countBadge.textContent = String(tempEditorComodos.length);
       if (!container) return;
 
       const isSeguradora = document.getElementById("jobTipoDestinatario")?.value === "SEGURADORA";
@@ -1954,7 +2693,31 @@ ${buildInternalSystemContext()}`;
         return;
       }
 
+      if (!activeExpandedRoomId || !tempEditorComodos.some(r => r.id === activeExpandedRoomId)) {
+        activeExpandedRoomId = tempEditorComodos[tempEditorComodos.length - 1].id;
+      }
+
       container.innerHTML = tempEditorComodos.map((room, rIdx) => {
+        const isExpanded = room.id === activeExpandedRoomId;
+        const filledItemsCount = (room.itens || []).filter(i => i.descricao && i.descricao.trim()).length;
+        const photosCount = (room.fotos || []).length;
+
+        if (!isExpanded) {
+          return `
+            <div data-expand-room="${room.id}" class="bg-white hover:bg-slate-50 rounded-2xl p-3.5 border-2 ${room.concluido ? "border-emerald-400 bg-emerald-50/20" : "border-slate-200"} shadow-2xs flex items-center justify-between gap-2 cursor-pointer transition">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="px-2 py-0.5 rounded-md bg-[#07133A] text-[#DFC48B] font-black text-[11px] shrink-0">${rIdx + 1}</span>
+                <div class="min-w-0">
+                  <span class="font-black text-xs sm:text-sm text-slate-900 uppercase block truncate">${room.concluido ? "✓ " : ""}${escapeHtml(room.nome)}</span>
+                  <span class="text-[11px] text-slate-500 font-semibold block">${filledItemsCount} reparo(s) • ${photosCount} foto(s)</span>
+                </div>
+              </div>
+              <button type="button" data-expand-room="${room.id}" class="px-3 py-1.5 rounded-xl bg-slate-100 text-[#07133A] font-extrabold text-xs shrink-0">
+                Abrir ▾
+              </button>
+            </div>
+          `;
+        }
         const chipsHtml = QUICK_REPAIR_CHIPS.map((ch, cIdx) => `
           <button type="button" data-room-quick-repair="${room.id}::${cIdx}" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-800 border border-slate-200 text-[11px] font-bold transition">
             ${ch.label}
@@ -2313,44 +3076,69 @@ ${buildInternalSystemContext()}`;
               </div>
             ` : ""}
 
-            <!-- BOTÕES DE AÇÃO DIFERENTES PARA O MARCELO vs. PARA A CAMILA -->
+            <!-- Selo de Tempo de Permanência e Agendamento quando registrados -->
+            ${(job.tempoPermanenciaMinutos || job.agendamentoDataHora || job.reservado) ? `
+              <div class="flex flex-wrap gap-1.5 text-[11px]">
+                ${job.tempoPermanenciaMinutos ? `<span class="px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-950 border border-indigo-200 font-extrabold">⏱️ Tempo no Local: ${job.tempoPermanenciaMinutos} min</span>` : ""}
+                ${job.agendamentoDataHora ? `<span class="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 font-extrabold">📅 Agendado: ${escapeHtml(job.agendamentoDataHora)}</span>` : ""}
+                ${job.reservado ? `<span class="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-950 border border-amber-300 font-extrabold">📌 Reservado</span>` : ""}
+              </div>
+            ` : ""}
+
+            <!-- BOTÕES DE AÇÃO GRANDES E INTUITIVOS (ESTILO APPLE HIG) -->
             ${isMarcelo ? `
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-                <a href="${wazeUrl}" target="_blank" rel="noopener noreferrer" class="touch-btn px-3 py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 font-extrabold text-xs flex items-center justify-center gap-1">
-                  🚗 Abrir Waze
+                <a href="${wazeUrl}" data-start-gps-route="${job.id}" target="_blank" rel="noopener noreferrer" class="touch-btn px-3 py-3 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-950 border border-sky-200 font-extrabold text-xs flex items-center justify-center gap-1.5">
+                  <span class="text-base">🚗</span> <span>Ir c/ Waze</span>
                 </a>
-                <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="touch-btn px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs flex items-center justify-center gap-1">
-                  📍 Google Maps
+                <a href="${mapsUrl}" data-start-gps-route="${job.id}" target="_blank" rel="noopener noreferrer" class="touch-btn px-3 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-xs flex items-center justify-center gap-1.5">
+                  <span class="text-base">📍</span> <span>Google Maps</span>
                 </a>
-                <button type="button" data-open-job-editor="${job.id}" class="col-span-2 sm:col-span-1 touch-btn px-3 py-2.5 rounded-xl bg-[#B6985A] hover:bg-[#a68849] text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-sm">
-                  📸 Vistoriar Cômodos &amp; Mão de Obra
+                <button type="button" data-open-job-editor="${job.id}" class="col-span-2 sm:col-span-1 touch-btn px-3 py-3 rounded-2xl bg-[#B6985A] hover:bg-[#a68849] text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-sm">
+                  <span class="text-base">📸</span> <span>Vistoriar (+ Cômodos)</span>
+                </button>
+              </div>
+              <div class="grid grid-cols-3 gap-2 pt-1">
+                <button type="button" data-open-schedule-modal="${job.id}" class="touch-btn px-2.5 py-2.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-950 border border-indigo-200 font-extrabold text-[11px] flex items-center justify-center gap-1">
+                  <span>📅 Agendar</span>
+                </button>
+                <button type="button" data-toggle-reserve-job="${job.id}" class="touch-btn px-2.5 py-2.5 rounded-2xl ${job.reservado ? "bg-amber-500 text-slate-950" : "bg-amber-50 text-amber-950 border border-amber-200"} font-extrabold text-[11px] flex items-center justify-center gap-1">
+                  <span>📌 ${job.reservado ? "Reservado" : "Reservar"}</span>
+                </button>
+                <button type="button" data-delete-job="${job.id}" class="touch-btn px-2.5 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-[11px] flex items-center justify-center gap-1">
+                  <span>🗑️ Excluir</span>
                 </button>
               </div>
             ` : `
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                <button type="button" data-open-job-editor="${job.id}" class="touch-btn px-3 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 border border-amber-300 font-extrabold text-xs flex items-center justify-center gap-1">
-                  ✏️ Abrir / Orçar (+ Fotos)
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                <button type="button" data-open-job-editor="${job.id}" class="touch-btn px-3 py-3 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 border border-amber-300 font-extrabold text-xs flex items-center justify-center gap-1.5">
+                  <span class="text-base">✏️</span> <span>Editar / + Cômodo</span>
                 </button>
-                <button type="button" data-open-pdf-modal="${job.id}" class="touch-btn px-3 py-2.5 rounded-xl bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-extrabold text-xs flex items-center justify-center gap-1 shadow-2xs">
-                  📄 Baixar PDF
+                <button type="button" data-open-pdf-modal="${job.id}" class="touch-btn px-3 py-3 rounded-2xl bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-2xs">
+                  <span class="text-base">📄</span> <span>Baixar PDF</span>
                 </button>
                 ${job.statusEngrenagem !== "APROVADO_AGENDADO" && job.statusEngrenagem !== "CONCLUIDO" ? `
-                  <button type="button" data-mark-job-approved="${job.id}" class="touch-btn px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-1">
-                    ✅ Imobiliária Aprovou
+                  <button type="button" data-mark-job-approved="${job.id}" class="col-span-2 sm:col-span-1 touch-btn px-3 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5">
+                    <span class="text-base">✅</span> <span>Aprovar Orçamento</span>
                   </button>
                 ` : `
-                  ${clientWhatsUrl ? `
-                    <a href="${clientWhatsUrl}" target="_blank" rel="noopener noreferrer" class="touch-btn px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-1">
-                      📞 Agendar c/ Cliente
-                    </a>
-                  ` : `
-                    <button type="button" data-mark-job-done="${job.id}" class="touch-btn px-3 py-2.5 rounded-xl bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-1">
-                      🏁 Concluir Obra
-                    </button>
-                  `}
+                  <button type="button" data-mark-job-done="${job.id}" class="col-span-2 sm:col-span-1 touch-btn px-3 py-3 rounded-2xl bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5">
+                    <span class="text-base">🏁</span> <span>Concluir Obra</span>
+                  </button>
                 `}
-                <button type="button" data-delete-job="${job.id}" class="touch-btn px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 font-bold text-xs flex items-center justify-center">
-                  🗑️ Excluir
+              </div>
+              <div class="grid grid-cols-4 gap-1.5 pt-1">
+                <button type="button" data-open-schedule-modal="${job.id}" class="touch-btn px-2 py-2.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-950 border border-indigo-200 font-extrabold text-[11px] flex items-center justify-center gap-1">
+                  <span>📅 Agendar</span>
+                </button>
+                <button type="button" data-toggle-reserve-job="${job.id}" class="touch-btn px-2 py-2.5 rounded-2xl ${job.reservado ? "bg-amber-500 text-slate-950" : "bg-amber-50 text-amber-950 border border-amber-200"} font-extrabold text-[11px] flex items-center justify-center gap-1">
+                  <span>📌 ${job.reservado ? "Reservado" : "Reservar"}</span>
+                </button>
+                <a href="${wazeUrl}" data-start-gps-route="${job.id}" target="_blank" rel="noopener noreferrer" class="touch-btn px-2 py-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 font-extrabold text-[11px] flex items-center justify-center gap-1">
+                  <span>🚗 Waze</span>
+                </a>
+                <button type="button" data-delete-job="${job.id}" class="touch-btn px-2 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-[11px] flex items-center justify-center gap-1">
+                  <span>🗑️ Excluir</span>
                 </button>
               </div>
             `}
@@ -3030,9 +3818,8 @@ ${buildInternalSystemContext()}`;
       openModal("modalPropertyHistory");
     }
 
-    function openJobInEditor(jobObj) {
-      const sec = document.getElementById("editorSection");
-      sec.classList.remove("hidden");
+    function openJobInEditor(jobObj, initialStep = 1) {
+      toggleMainViewForEditor(true);
       activeDraftId = (jobObj && jobObj.id && jobObj.id.startsWith("DRAFT-")) ? jobObj.id : null;
 
       const isMarcelo = currentSession.role === "MARCELO";
@@ -3074,9 +3861,10 @@ ${buildInternalSystemContext()}`;
         setDestTypeUI("PARTICULAR");
       }
 
+      activeExpandedRoomId = tempEditorComodos[0]?.id || null;
       renderRoomsEditor();
       updateEditorAddressHistoryAlert();
-      sec.scrollIntoView({ behavior: "smooth" });
+      setEditorWizardStep(initialStep);
     }
 
     function collectAndSaveJobFromEditor(forcedNextStatus) {
@@ -3149,8 +3937,9 @@ ${buildInternalSystemContext()}`;
         jobsList.unshift(jobData);
       }
 
-      document.getElementById("editorSection").classList.add("hidden");
+      toggleMainViewForEditor(false);
       saveJobsAndSync(jobData);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return jobData;
     }
 
@@ -3332,7 +4121,22 @@ ${buildInternalSystemContext()}`;
       document.getElementById("btnCamilaNewOrcamentoCompleto").addEventListener("click", () => openJobInEditor(null));
       document.getElementById("btnMarceloNewLevantamento").addEventListener("click", () => openJobInEditor(null));
       document.getElementById("btnCloseEditor").addEventListener("click", () => {
-        document.getElementById("editorSection").classList.add("hidden");
+        saveCurrentEditorAsDraft({ skipRender: true });
+        toggleMainViewForEditor(false);
+        renderJobsList();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      document.querySelectorAll("[data-wizard-step-btn]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          setEditorWizardStep(Number(btn.getAttribute("data-wizard-step-btn")));
+        });
+      });
+
+      document.querySelectorAll("[data-goto-wizard-step]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          setEditorWizardStep(Number(btn.getAttribute("data-goto-wizard-step")));
+        });
       });
 
       // Tipo Destinatário (Particular/Imobiliária vs Seguradora)
@@ -3355,8 +4159,15 @@ ${buildInternalSystemContext()}`;
         }
       });
 
-      // Interações dentro dos Cômodos (Reparos rápidos, fotos identificadas, valores)
+      // Interações dentro dos Cômodos (Sanfona, Reparos rápidos, fotos identificadas, valores)
       document.getElementById("roomsEditorContainer").addEventListener("click", (e) => {
+        const btnExpand = e.target.closest("[data-expand-room]");
+        if (btnExpand) {
+          activeExpandedRoomId = btnExpand.getAttribute("data-expand-room");
+          renderRoomsEditor();
+          return;
+        }
+
         const btnQuickRep = e.target.closest("[data-room-quick-repair]");
         if (btnQuickRep) {
           const [roomId, chipIdx] = btnQuickRep.getAttribute("data-room-quick-repair").split("::");
@@ -3658,13 +4469,34 @@ ${buildInternalSystemContext()}`;
           return;
         }
 
+        const btnSched = e.target.closest("[data-open-schedule-modal]");
+        if (btnSched) {
+          openScheduleCalendarModal(btnSched.getAttribute("data-open-schedule-modal"));
+          return;
+        }
+
+        const btnReserve = e.target.closest("[data-toggle-reserve-job]");
+        if (btnReserve) {
+          const id = btnReserve.getAttribute("data-toggle-reserve-job");
+          const job = jobsList.find(j => j.id === id);
+          if (job) {
+            job.reservado = !job.reservado;
+            saveJobsAndSync(job);
+            showToast(job.reservado ? "📌 Imóvel marcado como Reservado!" : "Reserva removida.", "success");
+          }
+          return;
+        }
+
+        const btnGpsRoute = e.target.closest("[data-start-gps-route]");
+        if (btnGpsRoute) {
+          startGpsVisitTracking(btnGpsRoute.getAttribute("data-start-gps-route"));
+          return;
+        }
+
         const btnDel = e.target.closest("[data-delete-job]");
         if (btnDel) {
           const id = btnDel.getAttribute("data-delete-job");
-          jobsList = jobsList.filter(j => j.id !== id);
-          safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
-          renderJobsList();
-          showToast("Registro removido.", "info");
+          openDeleteConfirmModal(id);
         }
       });
 
@@ -3720,7 +4552,7 @@ ${buildInternalSystemContext()}`;
           const ed = document.getElementById("editorSection");
           if (ed && !ed.classList.contains("hidden")) {
             saveCurrentEditorAsDraft({ skipRender: true });
-            ed.classList.add("hidden");
+            toggleMainViewForEditor(false);
           }
           setActiveFilterAndRefresh(navBtn.getAttribute("data-bottom-filter"));
         }
@@ -3762,7 +4594,90 @@ ${buildInternalSystemContext()}`;
 
       // Eventos de Auto-Save do Editor (debounce 250ms + pagehide/visibilitychange/beforeunload)
       document.getElementById("formJobEditor").addEventListener("input", scheduleDraftAutoSave);
-      document.getElementById("jobImovel").addEventListener("input", updateEditorAddressHistoryAlert);
+      const jobImovelInput = document.getElementById("jobImovel");
+      jobImovelInput.addEventListener("input", () => {
+        updateEditorAddressHistoryAlert();
+        renderFuzzyDropdown(jobImovelInput, "fuzzyAddressSuggestions", (pickedAddr, pickedClient) => {
+          if (pickedClient && !document.getElementById("jobClienteOuImob").value.trim()) {
+            document.getElementById("jobClienteOuImob").value = pickedClient;
+          }
+          updateEditorAddressHistoryAlert();
+          document.getElementById("step1ExtraDrawer")?.classList.remove("hidden");
+          scheduleDraftAutoSave();
+        });
+        if (jobImovelInput.value.trim().length >= 4) {
+          document.getElementById("step1ExtraDrawer")?.classList.remove("hidden");
+        }
+      });
+
+      const quickImovelInput = document.getElementById("quickMarceloImovel");
+      if (quickImovelInput) {
+        quickImovelInput.addEventListener("input", () => {
+          renderFuzzyDropdown(quickImovelInput, "fuzzyQuickMarceloSuggestions", (pickedAddr, pickedClient) => {
+            if (pickedClient && !document.getElementById("quickMarceloCliente").value.trim()) {
+              document.getElementById("quickMarceloCliente").value = pickedClient;
+            }
+          });
+        });
+      }
+
+      document.getElementById("btnToggleStep1ExtraDrawer").addEventListener("click", () => {
+        const drw = document.getElementById("step1ExtraDrawer");
+        drw.classList.toggle("hidden");
+      });
+
+      // Exclusão com Senha Master da Camila
+      document.getElementById("btnConfirmPermanentDelete").addEventListener("click", executePermanentDeleteWithPassword);
+      document.getElementById("deleteMasterPasswordInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          executePermanentDeleteWithPassword();
+        }
+      });
+
+      // Cronômetro de Permanência GPS no Imóvel
+      document.getElementById("btnConfirmArrivalNow").addEventListener("click", () => confirmVisitArrival(false));
+      document.getElementById("btnOpenVisitJobEditor").addEventListener("click", () => {
+        if (!activeVisitState) return;
+        const job = jobsList.find(j => j.id === activeVisitState.jobId);
+        if (job) openJobInEditor(job, 2);
+      });
+      document.getElementById("btnFinishVisitTimer").addEventListener("click", finishVisitTimerAndAnalyzeEfficiency);
+      document.getElementById("btnCloseAiTimeBox").addEventListener("click", () => {
+        document.getElementById("aiTimeEfficiencyBox").classList.add("hidden");
+      });
+
+      // Agendamento (Google Agenda + Apple Calendar .ics + Alertas por Minuto/Hora/Dia)
+      document.querySelectorAll("[data-sched-type]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const val = btn.getAttribute("data-sched-type");
+          document.getElementById("schedTypeValue").value = val;
+          document.querySelectorAll("[data-sched-type]").forEach(b => {
+            b.className = b === btn
+              ? "sched-type-btn py-2.5 px-2 rounded-xl text-xs font-black bg-[#07133A] text-[#DFC48B]"
+              : "sched-type-btn py-2.5 px-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700";
+          });
+          const job = jobsList.find(j => j.id === document.getElementById("schedTargetJobId").value);
+          updateScheduleDescriptionPreview(job, val, document.getElementById("schedAlertMinutes").value);
+        });
+      });
+
+      document.querySelectorAll("[data-sched-alert]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const mins = btn.getAttribute("data-sched-alert");
+          document.getElementById("schedAlertMinutes").value = mins;
+          document.querySelectorAll("[data-sched-alert]").forEach(b => {
+            b.className = b === btn
+              ? "sched-alert-btn py-2 px-2 rounded-xl text-xs font-extrabold bg-amber-500 text-slate-950"
+              : "sched-alert-btn py-2 px-2 rounded-xl text-xs font-bold bg-white text-amber-950 border border-amber-300";
+          });
+          const job = jobsList.find(j => j.id === document.getElementById("schedTargetJobId").value);
+          updateScheduleDescriptionPreview(job, document.getElementById("schedTypeValue").value, mins);
+        });
+      });
+
+      document.getElementById("btnAddGoogleCalendar").addEventListener("click", openInGoogleCalendar);
+      document.getElementById("btnDownloadAppleIcs").addEventListener("click", downloadAppleCalendarIcs);
       document.getElementById("btnViewEditorAddressHistory").addEventListener("click", () => {
         openPropertyHistoryModal(document.getElementById("jobImovel").value.trim());
       });
@@ -3937,6 +4852,11 @@ ${buildInternalSystemContext()}`;
 
       applyAdaptiveDeviceLayout();
       window.addEventListener("resize", applyAdaptiveDeviceLayout);
+      const savedVisit = safeStorageGet("total_service_active_visit_v5", null);
+      if (savedVisit && savedVisit.jobId) {
+        activeVisitState = savedVisit;
+        renderActiveVisitBanner();
+      }
       renderQuickRoomChipsBar();
       bindEvents();
       applyRoleInterface();
