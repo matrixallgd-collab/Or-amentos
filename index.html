@@ -132,6 +132,10 @@
       bottom: calc(10px + var(--safe-bottom));
     }
 
+    button, a, label {
+      touch-action: manipulation;
+    }
+
     .touch-btn {
       min-height: 46px;
       transition: all 0.16s cubic-bezier(0.22, 1, 0.36, 1);
@@ -324,7 +328,7 @@
 
     <!-- BARRA DE STATUS DA ENGRENAGEM (ETAPAS + RASCUNHOS) -->
     <section class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-      <button type="button" data-filter-stage="ALL" class="stage-kpi-btn liquid-glass-card rounded-2xl p-2.5 border-2 border-[#07133A] shadow-2xs text-left active:scale-95 transition">
+      <button type="button" data-filter-stage="PARA_MARCELO" class="stage-kpi-btn liquid-glass-card rounded-2xl p-2.5 border border-slate-200 shadow-2xs text-left active:scale-95 transition">
         <span class="text-[10px] font-extrabold text-slate-500 uppercase block truncate">1. Visitas Marcelo</span>
         <span id="kpiParaMarcelo" class="text-xl font-black text-slate-900">0</span>
       </button>
@@ -2735,6 +2739,28 @@ ${buildInternalSystemContext()}`;
       renderJobsList();
     }
 
+    function normalizeJobRecord(raw) {
+      if (!raw || typeof raw !== "object") return raw;
+      const r = { ...raw };
+      if (typeof r.comodos === "string") {
+        try { r.comodos = JSON.parse(r.comodos); } catch (e) { r.comodos = []; }
+      }
+      if (!Array.isArray(r.comodos)) r.comodos = [];
+      r.comodos = r.comodos.map((rm, idx) => {
+        const room = (rm && typeof rm === "object") ? { ...rm } : { id: "rm-" + idx, nome: "AMBIENTE", itens: [], fotos: [] };
+        if (typeof room.itens === "string") {
+          try { room.itens = JSON.parse(room.itens); } catch (e) { room.itens = []; }
+        }
+        if (typeof room.fotos === "string") {
+          try { room.fotos = JSON.parse(room.fotos); } catch (e) { room.fotos = []; }
+        }
+        if (!Array.isArray(room.itens)) room.itens = [];
+        if (!Array.isArray(room.fotos)) room.fotos = [];
+        return room;
+      });
+      return r;
+    }
+
     // OPTIMISTIC UI (0 ms): Atualiza tela e localStorage instantaneamente e envia em segundo plano
     async function saveJobsAndSync(jobRecord) {
       if (jobRecord && jobRecord.statusEngrenagem !== "RASCUNHO") {
@@ -2793,16 +2819,17 @@ ${buildInternalSystemContext()}`;
         const data = await resp.json();
         if (data && data.ok) {
           let changed = false;
-          if (Array.isArray(data.records)) {
+          if (Array.isArray(data.records) && data.records.length > 0) {
             const queuedIds = new Set(offlineQueue.map(q => q.record?.id));
-            const localDrafts = jobsList.filter(j => j.statusEngrenagem === "RASCUNHO");
             const localMap = new Map(jobsList.map(j => [j.id, j]));
             const merged = [];
 
-            data.records.forEach(srv => {
+            data.records.forEach(rawSrv => {
+              const srv = normalizeJobRecord(rawSrv);
+              if (!srv || !srv.id) return;
               const loc = localMap.get(srv.id);
               if (loc && (queuedIds.has(srv.id) || (loc.updatedAt && srv.updatedAt && loc.updatedAt > srv.updatedAt))) {
-                merged.push(loc);
+                merged.push(normalizeJobRecord(loc));
               } else {
                 merged.push(srv);
               }
@@ -3652,24 +3679,51 @@ ${buildInternalSystemContext()}`;
         generateAndShareJobPdf(id, "SEGURADORA");
       });
 
-      // Filtros de etapa e busca
-      document.querySelectorAll(".stage-kpi-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          activeStageFilter = btn.getAttribute("data-filter-stage");
-          renderJobsList();
-        });
-      });
+      function setActiveFilterAndRefresh(newFilter) {
+        activeStageFilter = newFilter || "ALL";
 
-      document.querySelectorAll(".bottom-nav-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          activeStageFilter = btn.getAttribute("data-bottom-filter");
-          document.querySelectorAll(".bottom-nav-btn").forEach(b => {
-            b.className = b === btn
-              ? "bottom-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[#07133A] font-extrabold"
-              : "bottom-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 font-medium";
-          });
-          renderJobsList();
+        // Atualiza destaque da barra inferior preservando 'relative'
+        document.querySelectorAll(".bottom-nav-btn").forEach(b => {
+          const isMatch = b.getAttribute("data-bottom-filter") === activeStageFilter;
+          b.classList.toggle("text-[#07133A]", isMatch);
+          b.classList.toggle("font-extrabold", isMatch);
+          b.classList.toggle("bg-slate-900/5", isMatch);
+          b.classList.toggle("text-slate-500", !isMatch);
+          b.classList.toggle("font-medium", !isMatch);
         });
+
+        // Atualiza destaque dos cards KPI
+        document.querySelectorAll(".stage-kpi-btn").forEach(k => {
+          const isMatch = k.getAttribute("data-filter-stage") === activeStageFilter;
+          k.classList.toggle("ring-2", isMatch);
+          k.classList.toggle("ring-[#07133A]", isMatch);
+        });
+
+        renderJobsList();
+        const listSec = document.getElementById("jobsListContainer");
+        if (listSec) {
+          listSec.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+
+      // Delegação global para filtros (KPIs e Barra Inferior) — funciona em qualquer toque no iOS Safari
+      document.addEventListener("click", (e) => {
+        const kpiBtn = e.target.closest(".stage-kpi-btn");
+        if (kpiBtn) {
+          const targetStage = kpiBtn.getAttribute("data-filter-stage");
+          setActiveFilterAndRefresh(activeStageFilter === targetStage ? "ALL" : targetStage);
+          return;
+        }
+
+        const navBtn = e.target.closest(".bottom-nav-btn");
+        if (navBtn) {
+          const ed = document.getElementById("editorSection");
+          if (ed && !ed.classList.contains("hidden")) {
+            saveCurrentEditorAsDraft({ skipRender: true });
+            ed.classList.add("hidden");
+          }
+          setActiveFilterAndRefresh(navBtn.getAttribute("data-bottom-filter"));
+        }
       });
 
       document.getElementById("searchJobsInput").addEventListener("input", renderJobsList);
@@ -3850,7 +3904,7 @@ ${buildInternalSystemContext()}`;
 
       const savedJobs = safeStorageGet(STORAGE_KEYS.JOBS, null);
       if (savedJobs && Array.isArray(savedJobs) && savedJobs.length > 0) {
-        jobsList = savedJobs;
+        jobsList = savedJobs.map(normalizeJobRecord);
       } else {
         jobsList = getSeedJobs();
         safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
