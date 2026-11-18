@@ -47,10 +47,8 @@
         radial-gradient(circle at 88% 8%, rgba(7, 19, 58, 0.08) 0%, transparent 45%),
         #EEF2F7;
       color: #0F172A;
-      padding-bottom: calc(110px + var(--safe-bottom));
-      overflow-x: clip;
+      padding-bottom: calc(116px + var(--safe-bottom));
       -webkit-overflow-scrolling: touch;
-      touch-action: pan-y pinch-zoom;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -86,6 +84,9 @@
 
     /* Liquid Glass Premium (Apple-style Frosted Glass) */
     .liquid-glass-header {
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      isolation: isolate;
       background: linear-gradient(135deg, rgba(7, 19, 58, 0.88) 0%, rgba(11, 28, 78, 0.84) 100%);
       backdrop-filter: blur(20px) saturate(170%);
       -webkit-backdrop-filter: blur(20px) saturate(170%);
@@ -95,6 +96,9 @@
     }
 
     .liquid-glass-dock {
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      isolation: isolate;
       background: rgba(255, 255, 255, 0.78);
       backdrop-filter: blur(22px) saturate(185%);
       -webkit-backdrop-filter: blur(22px) saturate(185%);
@@ -133,8 +137,13 @@
       bottom: calc(10px + var(--safe-bottom));
     }
 
-    button, a, label {
+    button, a, label, [role="button"], .stage-kpi-btn, .bottom-nav-btn, [data-expand-room] {
       touch-action: manipulation;
+      cursor: pointer;
+      -webkit-tap-highlight-color: rgba(182, 152, 90, 0.25);
+    }
+    button {
+      -webkit-appearance: none;
     }
 
     .touch-btn {
@@ -177,12 +186,12 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col" ontouchstart="">
 
   <!-- ======================================================================== -->
   <!-- TELA DE LOGIN COM SENHA EDITÁVEL E CAPTCHA (USO EXCLUSIVO CAMILA)      -->
   <!-- ======================================================================== -->
-  <div id="loginOverlay" class="fixed inset-0 z-50 bg-[#040B24]/90 backdrop-blur-xl flex items-center justify-center p-3 overflow-y-auto" style="background-image: radial-gradient(circle at 20% 20%, rgba(182,152,90,0.22), transparent 45%), radial-gradient(circle at 80% 80%, rgba(30,58,138,0.35), transparent 50%);">
+  <div id="loginOverlay" class="fixed inset-0 z-50 bg-[#040B24]/95 flex items-start sm:items-center justify-center p-3 pt-6 sm:pt-3 overflow-y-auto" style="background-image: radial-gradient(circle at 20% 20%, rgba(182,152,90,0.22), transparent 45%), radial-gradient(circle at 80% 80%, rgba(30,58,138,0.35), transparent 50%);">
     <div class="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-[28px] p-5 sm:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.45)] border border-white/60 space-y-4 my-auto">
       <div class="text-center space-y-2">
         <div class="bg-[#F8F6F2] px-4 py-3 rounded-2xl border border-slate-200 shadow-xs inline-flex items-center justify-center w-full">
@@ -255,13 +264,13 @@
     <div class="max-w-5xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="bg-[#F8F6F2] px-2.5 py-1 rounded-xl border border-slate-200/80 shadow-xs shrink-0 flex items-center">
-          <img id="headerWordmarkLogo" src="" alt="Tot@l Service" class="h-6 sm:h-7 w-auto object-contain" />
+          <img id="headerWordmarkLogo" src="" alt="Tot@l Service" class="h-5 sm:h-7 w-auto object-contain" />
         </div>
-        <div class="min-w-0">
-          <div class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#B6985A] text-slate-950 inline-flex items-center gap-1 truncate">
-            <span id="headerActiveUserBadge">👩‍💼 Camila Gouveia</span>
+        <div class="min-w-0 hidden md:block">
+          <div class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#B6985A] text-slate-950 inline-flex items-center gap-1 truncate max-w-[180px]">
+            <span id="headerActiveUserBadge" class="truncate">👩‍💼 Camila Gouveia</span>
           </div>
-          <p class="text-[10px] text-slate-300 truncate hidden sm:block mt-0.5">
+          <p class="text-[10px] text-slate-300 truncate mt-0.5">
             Marcelo Gouveia • (14) 99172-9052 • CNPJ 47.407.783/0001-96
           </p>
         </div>
@@ -794,7 +803,7 @@
   <!-- ======================================================================== -->
   <!-- MODAL: ESCOLHER FORMATO DO PDF (PARTICULAR/IMOBILIÁRIA vs SEGURADORA)    -->
   <!-- ======================================================================== -->
-  <div id="modalPdfOptions" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+  <div id="modalPdfOptions" class="fixed inset-0 z-50 hidden bg-slate-950/60  flex items-end sm:items-center justify-center p-3">
     <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl space-y-3.5 max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between">
         <h3 class="text-base font-extrabold text-slate-900">Gerar PDF Oficial — Tot@l Service</h3>
@@ -845,7 +854,7 @@
   <!-- ======================================================================== -->
   <!-- MODAL: IMPORTADOR MÁGICO (COLAR ORÇAMENTO, PDF, FOTO OU DITADO POR VOZ)  -->
   <!-- ======================================================================== -->
-  <div id="modalImportImob" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+  <div id="modalImportImob" class="fixed inset-0 z-50 hidden bg-slate-950/60  flex items-end sm:items-center justify-center p-3">
     <div class="bg-white w-full max-w-lg rounded-3xl p-5 shadow-2xl space-y-3.5 max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
         <div>
@@ -895,7 +904,7 @@
   <!-- ======================================================================== -->
   <!-- MODAL: EXCLUIR CLIENTE / ORÇAMENTO E APAGAR PASTAS DO GOOGLE DRIVE       -->
   <!-- ======================================================================== -->
-  <div id="modalDeleteConfirm" class="fixed inset-0 z-50 hidden bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+  <div id="modalDeleteConfirm" class="fixed inset-0 z-50 hidden bg-slate-950/70  flex items-end sm:items-center justify-center p-3">
     <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl border-2 border-rose-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-200 pb-3">
         <div class="flex items-center gap-2">
@@ -942,7 +951,7 @@
   <!-- ======================================================================== -->
   <!-- MODAL: AGENDAR VISITA / OBRA (GOOGLE AGENDA + APPLE/iOS + LEMBRETES)     -->
   <!-- ======================================================================== -->
-  <div id="modalScheduleCalendar" class="fixed inset-0 z-50 hidden bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+  <div id="modalScheduleCalendar" class="fixed inset-0 z-50 hidden bg-slate-950/70  flex items-end sm:items-center justify-center p-3">
     <div class="bg-white w-full max-w-lg rounded-3xl p-5 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-200 pb-3">
         <div class="flex items-center gap-2">
@@ -1024,7 +1033,7 @@
   <!-- ======================================================================== -->
   <!-- MODAL: HISTÓRICO DO IMÓVEL (MULTI-INQUILINO E MULTI-MANUTENÇÃO)          -->
   <!-- ======================================================================== -->
-  <div id="modalPropertyHistory" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+  <div id="modalPropertyHistory" class="fixed inset-0 z-50 hidden bg-slate-950/60  flex items-end sm:items-center justify-center p-3">
     <div class="bg-white w-full max-w-lg rounded-3xl p-5 shadow-2xl space-y-3.5 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
         <div>
@@ -1040,7 +1049,7 @@
   <!-- ======================================================================== -->
   <!-- MODAL: MUDAR USUÁRIO/SENHA (CAMILA & MARCELO) + GOOGLE SHEETS/DRIVE + IA -->
   <!-- ======================================================================== -->
-  <div id="modalSettings" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+  <div id="modalSettings" class="fixed inset-0 z-50 hidden bg-slate-950/60  flex items-end sm:items-center justify-center p-3">
     <div class="bg-white w-full max-w-lg rounded-3xl p-5 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-200 pb-3">
         <div>
@@ -1128,7 +1137,7 @@
   <!-- ======================================================================== -->
   <!-- MODAL / GAVETA DE CHAT COM IA PRIVADA (100% INTERNA + AUTO-APRENDIZADO)  -->
   <!-- ======================================================================== -->
-  <div id="modalAiPrivateChat" class="fixed inset-0 z-50 hidden bg-slate-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-2 sm:p-4">
+  <div id="modalAiPrivateChat" class="fixed inset-0 z-50 hidden bg-slate-950/65  flex items-end sm:items-center justify-center p-2 sm:p-4">
     <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 flex flex-col max-h-[88vh] overflow-hidden">
       <!-- Cabeçalho do Chat -->
       <div class="bg-[#07133A] text-white p-4 flex items-center justify-between gap-2">
@@ -5197,28 +5206,36 @@ Responda de forma clara, curta e útil para uma pessoa leiga. Se existir link de
         priceHistoryCatalog = savedHist;
       }
 
-      generateAndDrawCaptcha();
-      const savedSession = safeStorageGet(STORAGE_KEYS.SESSION, null);
-      if (savedSession && savedSession.role) {
-        currentSession = savedSession;
-        document.getElementById("loginOverlay").classList.add("hidden");
-      }
+      try { generateAndDrawCaptcha(); } catch (e) {}
+      try {
+        const savedSession = safeStorageGet(STORAGE_KEYS.SESSION, null);
+        if (savedSession && savedSession.role) {
+          currentSession = savedSession;
+          document.getElementById("loginOverlay").classList.add("hidden");
+        }
+      } catch (e) {}
 
-      applyAdaptiveDeviceLayout();
-      window.addEventListener("resize", applyAdaptiveDeviceLayout);
-      const savedVisit = safeStorageGet("total_service_active_visit_v5", null);
-      if (savedVisit && savedVisit.jobId) {
-        activeVisitState = savedVisit;
-        renderActiveVisitBanner();
-      }
-      renderQuickRoomChipsBar();
-      rebuildPrivateAiMemory();
+      try {
+        applyAdaptiveDeviceLayout();
+        window.addEventListener("resize", applyAdaptiveDeviceLayout);
+        const savedVisit = safeStorageGet("total_service_active_visit_v5", null);
+        if (savedVisit && savedVisit.jobId) {
+          activeVisitState = savedVisit;
+          renderActiveVisitBanner();
+        }
+        renderQuickRoomChipsBar();
+        rebuildPrivateAiMemory();
+      } catch (e) { console.warn("Init UI warning:", e); }
+
       bindEvents();
-      applyRoleInterface();
-      updateSyncStatusIndicator();
-      if (offlineQueue.length > 0) flushOfflineQueue();
-      pullFromGoogleSheets({ silent: true });
-      startBackgroundAutoSync();
+
+      try {
+        applyRoleInterface();
+        updateSyncStatusIndicator();
+        if (offlineQueue.length > 0) flushOfflineQueue();
+        pullFromGoogleSheets({ silent: true });
+        startBackgroundAutoSync();
+      } catch (e) { console.warn("Sync init warning:", e); }
     }
 
     window.addEventListener("DOMContentLoaded", initApp);
