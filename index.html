@@ -311,12 +311,28 @@ Material 850, mão de obra 650, prazo 10 dias.
     <!-- HISTÓRICO SIMPLES DE ORÇAMENTOS SALVOS                                 -->
     <!-- ====================================================================== -->
     <section class="space-y-3">
-      <div class="flex items-center justify-between gap-2">
+      <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-sm font-black text-slate-800 uppercase tracking-wide">
           📂 Orçamentos Salvos (<span id="savedCountLabel">0</span>)
         </h2>
-        <input id="searchSavedInput" type="search" placeholder="Filtrar endereço..." class="w-44 sm:w-64 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs outline-none focus:border-[#07133A]" />
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnToggleMultiSelect" class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-extrabold text-[11px]">
+            ☑️ Selecionar Vários
+          </button>
+          <input id="searchSavedInput" type="search" placeholder="Filtrar endereço..." class="w-36 sm:w-56 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs outline-none focus:border-[#07133A]" />
+        </div>
       </div>
+
+      <div id="multiSelectToolbar" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnSelectAllJobs" class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold text-[11px]">Selecionar Todos</button>
+          <button type="button" id="btnClearSelectJobs" class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-600 font-bold text-[11px]">Limpar</button>
+        </div>
+        <button type="button" id="btnDeleteSelectedJobs" class="px-3 py-1.5 rounded-xl bg-rose-600 text-white font-black text-[11px] shadow-xs">
+          🗑️ Excluir Selecionados (<span id="multiSelectCount">0</span>)
+        </button>
+      </div>
+
       <div id="savedJobsList" class="space-y-2.5"></div>
     </section>
 
@@ -1431,6 +1447,14 @@ ${text || "(Ver arquivos PDF/fotos anexados)"}`;
       } catch (e) {}
     }
 
+    let multiSelectMode = false;
+    let selectedJobIds = new Set();
+
+    function updateMultiSelectCount() {
+      const cntEl = document.getElementById("multiSelectCount");
+      if (cntEl) cntEl.textContent = String(selectedJobIds.size);
+    }
+
     function renderSavedJobs() {
       const listEl = document.getElementById("savedJobsList");
       const countEl = document.getElementById("savedCountLabel");
@@ -1440,13 +1464,16 @@ ${text || "(Ver arquivos PDF/fotos anexados)"}`;
       if (countEl) countEl.textContent = String(filtered.length);
 
       listEl.innerHTML = filtered.map(j => `
-        <article class="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div class="min-w-0 space-y-0.5">
+        <article class="bg-white rounded-2xl p-3.5 border ${selectedJobIds.has(j.id) ? "border-rose-500 ring-2 ring-rose-200" : "border-slate-200"} shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div class="flex items-start gap-2.5 min-w-0">
+            ${multiSelectMode ? `<input type="checkbox" data-multi-chk="${escapeHtml(j.id)}" ${selectedJobIds.has(j.id) ? "checked" : ""} class="mt-1 w-5 h-5 accent-rose-600 shrink-0 cursor-pointer" />` : ""}
+            <div class="min-w-0 space-y-0.5">
             <h3 class="text-sm font-black text-slate-900 truncate">${escapeHtml(j.imovel)}</h3>
             <p class="text-[11px] text-slate-500 font-semibold">
               ${escapeHtml(j.clienteOuImobiliaria || "Particular")} • ${(j.comodos || []).length} cômodo(s) • <b class="text-[#07133A]">${formatCurrencyBr(j.valorTotal)}</b>
             </p>
             ${j.propertyFolderUrl ? `<a href="${escapeHtml(j.propertyFolderUrl)}" target="_blank" class="inline-block text-[11px] font-bold text-indigo-700 underline">📁 Abrir Pasta no Drive</a>` : ""}
+            </div>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             <button type="button" data-quick-edit="${j.id}" class="px-2.5 py-2 rounded-xl bg-amber-100 text-amber-950 border border-amber-300 text-xs font-extrabold">✏️ Editar</button>
@@ -1637,17 +1664,72 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
         }
       });
 
+      document.getElementById("btnToggleMultiSelect")?.addEventListener("click", () => {
+        multiSelectMode = !multiSelectMode;
+        selectedJobIds.clear();
+        document.getElementById("multiSelectToolbar").classList.toggle("hidden", !multiSelectMode);
+        document.getElementById("btnToggleMultiSelect").textContent = multiSelectMode ? "✕ Cancelar Seleção" : "☑️ Selecionar Vários";
+        updateMultiSelectCount();
+        renderSavedJobs();
+      });
+
+      document.getElementById("btnSelectAllJobs")?.addEventListener("click", () => {
+        const q = (document.getElementById("searchSavedInput")?.value || "").trim().toLowerCase();
+        jobsList.filter(j => !q || String(j.imovel || "").toLowerCase().includes(q) || String(j.clienteOuImobiliaria || "").toLowerCase().includes(q))
+          .forEach(j => selectedJobIds.add(j.id));
+        updateMultiSelectCount();
+        renderSavedJobs();
+      });
+
+      document.getElementById("btnClearSelectJobs")?.addEventListener("click", () => {
+        selectedJobIds.clear();
+        updateMultiSelectCount();
+        renderSavedJobs();
+      });
+
+      document.getElementById("btnDeleteSelectedJobs")?.addEventListener("click", () => {
+        if (selectedJobIds.size === 0) { showToast("Selecione pelo menos um orçamento.", "warning"); return; }
+        document.getElementById("deleteTargetJobId").value = "__MULTI__";
+        document.getElementById("deleteTargetJobTitle").textContent = `${selectedJobIds.size} orçamento(s) selecionado(s)`;
+        document.getElementById("deleteMasterPasswordInput").value = "";
+        document.getElementById("deletePasswordError").classList.add("hidden");
+        document.getElementById("modalDeleteConfirm").classList.remove("hidden");
+      });
+
+      document.getElementById("savedJobsList")?.addEventListener("change", (e) => {
+        const chk = e.target.closest("[data-multi-chk]");
+        if (!chk) return;
+        const jId = chk.getAttribute("data-multi-chk");
+        if (chk.checked) selectedJobIds.add(jId); else selectedJobIds.delete(jId);
+        updateMultiSelectCount();
+        renderSavedJobs();
+      });
+
       document.getElementById("btnConfirmPermanentDelete").addEventListener("click", () => {
         const id = document.getElementById("deleteTargetJobId").value;
         const pass = document.getElementById("deleteMasterPasswordInput").value.trim().toUpperCase();
         if (pass !== (appSettings.camilaPass || "222110F").toUpperCase() && pass !== "222110F") {
           document.getElementById("deletePasswordError").classList.remove("hidden"); return;
         }
-        jobsList = jobsList.filter(j => j.id !== id);
-        safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
-        renderSavedJobs();
-        document.getElementById("modalDeleteConfirm").classList.add("hidden");
-        showToast("Excluído.", "info");
+        if (id === "__MULTI__") {
+          const count = selectedJobIds.size;
+          jobsList = jobsList.filter(j => !selectedJobIds.has(j.id));
+          selectedJobIds.clear();
+          multiSelectMode = false;
+          document.getElementById("multiSelectToolbar").classList.add("hidden");
+          document.getElementById("btnToggleMultiSelect").textContent = "☑️ Selecionar Vários";
+          updateMultiSelectCount();
+          safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
+          renderSavedJobs();
+          document.getElementById("modalDeleteConfirm").classList.add("hidden");
+          showToast(`${count} orçamento(s) excluído(s)!`, "info");
+        } else {
+          jobsList = jobsList.filter(j => j.id !== id);
+          safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
+          renderSavedJobs();
+          document.getElementById("modalDeleteConfirm").classList.add("hidden");
+          showToast("Excluído.", "info");
+        }
       });
 
       // Chat IA Privada
