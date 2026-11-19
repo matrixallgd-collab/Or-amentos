@@ -686,7 +686,7 @@ Responda sempre em português do Brasil.`;
       }
 
       const cachedModel = safeStorageGet("total_service_working_gemini_model", "");
-      const baseModels = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash"];
+      const baseModels = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
       const modelsToTry = cachedModel ? [cachedModel, ...baseModels.filter(m => m !== cachedModel)] : baseModels;
       const errors = [];
 
@@ -721,8 +721,13 @@ Responda sempre em português do Brasil.`;
 
       for (const modelName of modelsToTry) {
         try {
-          const res = await tryModel(modelName);
+          let res = await tryModel(modelName);
           if (res.ok) return res.text;
+          if (/high demand|overloaded|503|unavailable/i.test(res.err)) {
+            await new Promise(r => setTimeout(r, 1500));
+            res = await tryModel(modelName);
+            if (res.ok) return res.text;
+          }
           errors.push(res.err);
         } catch (e) {
           errors.push(`${modelName}: ${e.message || "Falha de rede"}`);
@@ -791,13 +796,43 @@ Responda sempre em português do Brasil.`;
 
     function cleanPortugueseService(txt) {
       let s = String(txt || "").trim();
+      const typoMap = [
+        [/\bconcert(o|ar|os)\b/gi, "consert$1"],
+        [/\bfiacao\b/gi, "fiação"],
+        [/\beletrica\b/gi, "elétrica"],
+        [/\bhidraulica\b/gi, "hidráulica"],
+        [/\bmao\s+de\s+obra\b/gi, "mão de obra"],
+        [/\bporao\b/gi, "porão"],
+        [/\bportao\b/gi, "portão"],
+        [/\bsofa\b/gi, "sofá"],
+        [/\barmario\b/gi, "armário"],
+        [/\bquebraduras\b/gi, "quebraduras e trincas"]
+      ];
+      typoMap.forEach(([rx, rep]) => { s = s.replace(rx, rep); });
       s = s.replace(/\b(mas|mais)\s+r?\$?\s*[\d.,]+.*/i, "").trim();
-      s = s.replace(/r\$\s*[\d.,]+/gi, "").replace(/\b(de\s+)?(material|m[aã]o\s*de\s*obra|total)\b[:\s\d.,]*/gi, "").trim();
+      s = s.replace(/r\$\s*[\d.,]+/gi, "");
+      s = s.replace(/\b(de\s+)?(material|m[aã]o\s*de\s*obra|total)\b[:\s\d.,]*/gi, " ");
+      s = s.replace(/\b(cada\s+uma?|em\s+torno\s+de|por)\s*$/i, "");
+      s = s.replace(/\s+(e|de|da|do|das|dos|para|com|a|o)\s*$/i, "");
       s = s.replace(/\s{2,}/g, " ").replace(/^[,;:\-\s]+|[,;:\-\s]+$/g, "");
-      if (!s) return "";
+      if (!s || s.length < 3) return "";
       s = s.charAt(0).toUpperCase() + s.slice(1);
       if (!/[.!?]$/.test(s)) s += ".";
       return s;
+    }
+
+    function detectRoomFromText(seg) {
+      const u = String(seg || "").toUpperCase();
+      if (/COZINHA/.test(u)) return "COZINHA";
+      if (/BANHEIRO|LAVABO/.test(u)) return "BANHEIRO";
+      if (/LAVANDERIA|[ÁA]REA\s+DE\s+SERVI/.test(u)) return "LAVANDERIA";
+      if (/SALA/.test(u)) return "SALA";
+      if (/SU[ÍI]TE|QUARTO/.test(u)) return "QUARTOS";
+      if (/GARAGEM|PORT[ÃA]O|GRADE/.test(u)) return "GARAGEM / FACHADA";
+      if (/POR[ÃA]O/.test(u)) return "PORÃO";
+      if (/TELHADO|CALHA/.test(u)) return "TELHADO";
+      if (/QUINTAL|JARDIM|EXTERNA|LADO\s+DE\s+FORA/.test(u)) return "ÁREA EXTERNA";
+      return "SERVIÇOS GERAIS";
     }
 
     function localSmartParse(rawText) {
@@ -818,26 +853,32 @@ Responda sempre em português do Brasil.`;
         const firstLine = String(rawText || "").split(/\r?\n/)[0] || "";
         imovel = firstLine.split(",")[0].trim().slice(0, 75) || "Imóvel a confirmar";
       }
+      // Remove zeros à esquerda no número da casa (04-016 -> 4-16)
+      imovel = imovel.replace(/\b0+(\d+)-0*(\d+)\b/g, "$1-$2");
 
       const cliente = detectAgencyName(cleanRaw);
       const cpfM = cleanRaw.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/);
       const inquilinoCpf = cpfM ? cpfM[0] : "";
-      const inqM = cleanRaw.match(/inquilino\s*[:\-]?\s*([A-Za-zÀ-ÿ\s]{3,40})/i);
-      const inquilinoNome = inqM ? inqM[1].replace(/cpf.*/i, "").trim() : "";
+      const inqM = cleanRaw.match(/inquilino\s*[:\-]?\s*([A-Za-zÀ-ÿ\s]{3,40}?)(?=\s+(?:cpf|pintura|pintar|trocar|troca|consertar|reparar|instalar|limpar|limpeza|material|m[aã]o)\b|[,.;\n]|$)/i);
+      const inquilinoNome = inqM ? inqM[1].trim() : "";
 
       const serviceVerbs = /(trocar|troca|substitu|pintar|pintura|consert|repar|arrum|instal|limp|higieniz|enca|fia[cç][aã]o|el[eé]tric|hidr[aá]ul|telhad|calha|vazament|porta|janela|fechadura|tomada|interruptor|torneira|pia|vaso|gabinete|arm[aá]rio|piso|azulejo|vidro|gesso|muro|port[aã]o|mangueira|sof[aá]|cadeira|mesa|tinta|lata|alvenaria|trinc|reforma|faxin|cotar|cota[cç][aã]o)/i;
       const noiseRe = /(recadinho|campanha\s+de\s+ora[cç]|mam[aã]e|orar|ora[cç][õo]es|bom\s+dia|boa\s+tarde|oi\s+tudo\s+bem|programa)/i;
       const providerRe = /\b(pintor|eletricista|encanador|pedreiro|marceneiro|vidraceiro|serralheiro|faxineira|diarista|jardineiro|gesseiro)\b/i;
 
+      // Quebra inteligente antes de verbos/substantivos de serviço para separar cada item em lista
       const rawSegments = String(rawText || "")
-        .replace(/\s+(trocar|troca\s+de|fazer|consertar|instalar|pintar|pintura|arrumar|limpar|limpeza|substituir|cotar|reforma)\s+/gi, "\n$1 ")
+        .replace(/\s+(trocar|troca\s+de|fazer|consertar|instalar|pintar|pintura\s+d[aeo]|arrumar|limpar|limpeza|substituir|cotar|reforma\s+d[aeo])\s+/gi, "\n$1 ")
         .split(/\r?\n|;/)
         .map(s => s.trim())
         .filter(Boolean);
 
-      const roomKeys = ["HALL", "SALA", "LAVABO", "QUARTO", "SUÍTE", "SUITE", "BANHEIRO", "COZINHA", "ÁREA", "AREA", "GARAGEM", "LAVANDERIA", "QUINTAL", "TELHADO", "CANIL"];
-      const comodos = [];
-      let curRoom = null;
+      const roomMap = new Map();
+      const addRoomItem = (roomName, itemObj) => {
+        const key = String(roomName || "SERVIÇOS GERAIS").toUpperCase();
+        if (!roomMap.has(key)) roomMap.set(key, { id: "rm-" + (roomMap.size + 1), nome: key, itens: [], fotos: [] });
+        roomMap.get(key).itens.push(itemObj);
+      };
 
       const extractClausePrices = (seg) => {
         let mat = 0, mao = 0;
@@ -845,19 +886,22 @@ Responda sempre em português do Brasil.`;
         mMat.forEach(m => { mat += parseNum(m[1] || m[2]); });
         const mMao = [...seg.matchAll(/(?:r\$\s*([\d.,]+)\s*(?:de\s+)?m[aã]o\s*de\s*obra|m[aã]o\s*de\s*obra\s*[:\-]?\s*(?:de\s+)?r?\$?\s*([\d.,]+))/gi)];
         mMao.forEach(m => { mao += parseNum(m[1] || m[2]); });
+
         const qtyUnit = seg.match(/(\d+)\s*(?:latas?|unidades?|pe[çc]as?|cadeiras?|mesas?|tomadas?|torneiras?)[^.\n]{0,40}?cada[^.\n]{0,20}?r?\$?\s*([\d.,]+)/i);
         if (qtyUnit) {
           const q = parseInt(qtyUnit[1], 10) || 1;
           const u = parseNum(qtyUnit[2]);
           if (u > 0 && mat === 0) mat = q * u;
         }
+
         if (mat === 0 && mao === 0) {
           if (/faxin|limp|m[aã]o\s*de\s*obra|pintor|eletricista|encanador|pedreiro/i.test(seg)) {
-            const pMao = seg.match(/r\$\s*([\d.,]+)/i);
+            const pMao = seg.match(/(?:r\$\s*|\b(?:por|de)\s+)([\d.,]+)(?!\s*dias?)/i);
             if (pMao) mao = parseNum(pMao[1]);
           } else {
-            const singlePrice = seg.match(/r\$\s*([\d.,]+)/i);
-            if (singlePrice) mat = parseNum(singlePrice[1]);
+            // Soma múltiplos valores avulsos na mesma frase (ex: cozinha 120, banheiro 75, lavanderia 89)
+            const bareNums = [...seg.matchAll(/(?:r\$\s*|\b(?:cozinha|banheiro|lavanderia|sala|quarto|por|custa)\s+(?:de\s+)?)(\d{2,5}(?:[.,]\d{2})?)\b/gi)];
+            bareNums.forEach(bn => { mat += parseNum(bn[1]); });
           }
         }
         const pM = seg.match(providerRe);
@@ -865,61 +909,42 @@ Responda sempre em português do Brasil.`;
         return { mat, mao, prestador };
       };
 
+      const roomKeys = ["HALL", "SALA", "LAVABO", "QUARTO", "SUÍTE", "SUITE", "BANHEIRO", "COZINHA", "ÁREA", "AREA", "GARAGEM", "LAVANDERIA", "QUINTAL", "TELHADO", "CANIL"];
+      let forcedRoom = "";
+
       rawSegments.forEach(seg => {
         if (noiseRe.test(seg) && !serviceVerbs.test(seg)) return;
         const up = seg.toUpperCase();
         const foundRoom = roomKeys.find(rk => up.startsWith(rk) || up.includes(rk + ":"));
         if (foundRoom && seg.includes(":")) {
           const idx = seg.indexOf(":");
-          const rName = seg.slice(0, idx).trim().toUpperCase();
-          curRoom = { id: "rm-" + (comodos.length + 1), nome: rName, itens: [], fotos: [] };
-          comodos.push(curRoom);
+          forcedRoom = seg.slice(0, idx).trim().toUpperCase();
           const rest = seg.slice(idx + 1).trim();
           if (rest) {
             const desc = cleanPortugueseService(rest);
             if (desc) {
               const pr = extractClausePrices(rest);
-              curRoom.itens.push({
-                descricao: desc,
-                prestador: pr.prestador,
-                valorMaterial: pr.mat,
-                valorMaoDeObra: pr.mao,
-                valor: pr.mat + pr.mao
-              });
+              addRoomItem(forcedRoom, { descricao: desc, prestador: pr.prestador, valorMaterial: pr.mat, valorMaoDeObra: pr.mao, valor: pr.mat + pr.mao });
             }
           }
           return;
         }
-        if (serviceVerbs.test(seg) || /r\$\s*[\d.,]+/i.test(seg)) {
-          if (!curRoom) {
-            curRoom = { id: "rm-1", nome: "SERVIÇOS GERAIS", itens: [], fotos: [] };
-            comodos.push(curRoom);
-          }
+        if (serviceVerbs.test(seg)) {
           const desc = cleanPortugueseService(seg);
-          if (desc && desc.length > 3) {
+          if (desc && desc.length > 4) {
             const pr = extractClausePrices(seg);
-            curRoom.itens.push({
-              descricao: desc,
-              prestador: pr.prestador,
-              valorMaterial: pr.mat,
-              valorMaoDeObra: pr.mao,
-              valor: pr.mat + pr.mao
-            });
+            const rmName = forcedRoom || detectRoomFromText(seg);
+            addRoomItem(rmName, { descricao: desc, prestador: pr.prestador, valorMaterial: pr.mat, valorMaoDeObra: pr.mao, valor: pr.mat + pr.mao });
           }
         }
       });
 
+      const comodos = Array.from(roomMap.values());
       if (!comodos.length) {
         comodos.push({
           id: "rm-1",
           nome: "SERVIÇOS GERAIS",
-          itens: [{
-            descricao: cleanPortugueseService(cleanRaw) || "Itens conforme solicitação.",
-            prestador: "",
-            valorMaterial: 0,
-            valorMaoDeObra: 0,
-            valor: 0
-          }],
+          itens: [{ descricao: cleanPortugueseService(cleanRaw) || "Itens conforme solicitação.", prestador: "", valorMaterial: 0, valorMaoDeObra: 0, valor: 0 }],
           fotos: []
         });
       }
