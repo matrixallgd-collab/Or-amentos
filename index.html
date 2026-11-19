@@ -581,21 +581,35 @@ Responda sempre em português do Brasil.`;
         bodyObj.generationConfig = { responseMimeType: "application/json" };
       }
 
-      const modelsToTry = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite"];
+      const cachedModel = safeStorageGet("total_service_working_gemini_model", "");
+      const baseModels = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash"];
+      const modelsToTry = cachedModel ? [cachedModel, ...baseModels.filter(m => m !== cachedModel)] : baseModels;
       const errors = [];
+
+      const fetchWithTimeout = async (url, opts, ms = 12000) => {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), ms);
+        try {
+          return await fetch(url, { ...opts, signal: ctrl.signal });
+        } finally {
+          clearTimeout(timer);
+        }
+      };
 
       const tryModel = async (mName) => {
         const cleanName = String(mName || "").replace(/^models\//, "");
-        const resp = await fetch(
+        const resp = await fetchWithTimeout(
           `https://generativelanguage.googleapis.com/v1beta/models/${cleanName}:generateContent?key=${encodeURIComponent(apiKey)}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(bodyObj)
-          }
+          },
+          12000
         );
         const data = await resp.json();
         if (resp.ok && !data.error) {
+          safeStorageSet("total_service_working_gemini_model", cleanName);
           return { ok: true, text: data?.candidates?.[0]?.content?.parts?.[0]?.text || "" };
         }
         return { ok: false, err: `${cleanName}: ${data?.error?.message || "HTTP " + resp.status}` };
@@ -613,7 +627,7 @@ Responda sempre em português do Brasil.`;
 
       // Auto-descoberta dinâmica: consulta os modelos liberados para esta chave API
       try {
-        const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+        const listResp = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`, {}, 8000);
         const listData = await listResp.json();
         const available = (listData.models || [])
           .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes("generateContent"))
@@ -898,18 +912,24 @@ ${buildInternalContextText()}`;
         synced: false
       };
 
-      jobsList.unshift(newJob);
-      saveAndSyncJob(newJob);
-      showResultPreview(newJob);
+      try {
+        jobsList.unshift(newJob);
+        saveAndSyncJob(newJob);
+        showResultPreview(newJob);
 
-      // Limpa caixa para o próximo
-      document.getElementById("magicPromptBox").value = "";
-      magicAttachedFiles = [];
-      renderMagicAttachments();
-
-      if (btn) btn.disabled = false;
-      if (btnLbl) btnLbl.textContent = "✨ ORGANIZAR E GERAR ORÇAMENTO + PDF";
-      showToast("✅ Orçamento organizado! Já pode baixar o PDF abaixo.", "success");
+        // Limpa caixa para o próximo
+        const boxEl = document.getElementById("magicPromptBox");
+        if (boxEl) boxEl.value = "";
+        magicAttachedFiles = [];
+        renderMagicAttachments();
+        showToast("✅ Orçamento organizado! Já pode baixar o PDF abaixo.", "success");
+      } catch (uiErr) {
+        console.error("Erro ao finalizar orçamento:", uiErr);
+        showToast("Erro ao exibir orçamento: " + (uiErr.message || uiErr), "error");
+      } finally {
+        if (btn) btn.disabled = false;
+        if (btnLbl) btnLbl.textContent = "✨ ORGANIZAR E GERAR ORÇAMENTO + PDF";
+      }
     }
 
     function showResultPreview(job) {
