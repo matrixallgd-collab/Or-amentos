@@ -568,6 +568,13 @@ Material 850, mão de obra 650, prazo 10 dias.
                 k = String(obj.geminiApiKey).trim();
                 appSettings.geminiApiKey = k;
                 safeStorageSet(STORAGE_KEYS.SETTINGS, appSettings);
+        if (appSettings.geminiApiKey && getGasUrl()) {
+          fetch(getGasUrl(), {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "saveApiKey", geminiApiKey: appSettings.geminiApiKey })
+          }).catch(() => {});
+        }
                 break;
               }
             }
@@ -805,7 +812,7 @@ Responda sempre em português do Brasil.`;
       };
 
       let imovel = "";
-      const endM = cleanRaw.match(/(?:rua|r\.|av\.?|avenida|alameda|travessa|condom[ií]nio)\s+[^,.;\n]+(?:,\s*n[º°]?\s*\d+[\w-]*)?/i);
+      const endM = cleanRaw.match(/(?:rua|r\.|av\.?|avenida|alameda|travessa|condom[ií]nio)\s+[^,.;\n]+?(?=\s+(?:pintura|pintar|trocar|troca|consertar|reparar|instalar|limpar|limpeza|material|m[aã]o\s+de\s+obra|inquilino|imobili[aá]ria)\b|[,.;\n]|$)/i);
       if (endM) imovel = endM[0].trim();
       if (!imovel) {
         const firstLine = String(rawText || "").split(/\r?\n/)[0] || "";
@@ -922,6 +929,15 @@ Responda sempre em português do Brasil.`;
         totalMat += Number(it.valorMaterial || 0);
         totalMao += Number(it.valorMaoDeObra || 0);
       }));
+
+      if (totalMat === 0) {
+        const gMat = [...cleanRaw.matchAll(/(?:r\$\s*([\d.,]+)\s*(?:de\s+)?material|material\s*[:\-]?\s*(?:de\s+)?r?\$?\s*([\d.,]+))/gi)];
+        gMat.forEach(m => { totalMat += parseNum(m[1] || m[2]); });
+      }
+      if (totalMao === 0) {
+        const gMao = [...cleanRaw.matchAll(/(?:r\$\s*([\d.,]+)\s*(?:de\s+)?m[aã]o\s*de\s*obra|m[aã]o\s*de\s*obra\s*[:\-]?\s*(?:de\s+)?r?\$?\s*([\d.,]+))/gi)];
+        gMao.forEach(m => { totalMao += parseNum(m[1] || m[2]); });
+      }
 
       return {
         imovel,
@@ -1411,16 +1427,208 @@ ${text || "(Ver arquivos PDF/fotos anexados)"}`;
       }
     }
 
+    async function buildPdfDocForJob(job, mode = "PARTICULAR") {
+      const JsPDFClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
+      if (!JsPDFClass) return null;
+
+      const doc = new JsPDFClass({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageW = 210, pageH = 297, margin = 18, maxW = pageW - margin * 2;
+      let y = 16;
+
+      const vMat = Number(job.valorMaterial) || 0;
+      const vMao = Number(job.valorMaoDeObra) || 0;
+      const vTot = Number(job.valorTotal) || (vMat + vMao);
+      const clienteStr = String(job.clienteOuImobiliaria || "Particular").trim();
+      const isImob = clienteStr && !/^particular$/i.test(clienteStr);
+
+      try {
+        if (isImob) {
+          doc.addImage(LOGO_BASE64, "JPEG", margin, y, 74, 24);
+          doc.setDrawColor(182, 152, 90);
+          doc.setFillColor(7, 19, 58);
+          doc.roundedRect(pageW - margin - 82, y + 1, 82, 22, 2.5, 2.5, "FD");
+          doc.setTextColor(223, 196, 139);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(7.5);
+          doc.text("IMOBILIÁRIA PARCEIRA", pageW - margin - 41, y + 8, { align: "center" });
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(10.5);
+          const agLines = doc.splitTextToSize(clienteStr.toUpperCase(), 76);
+          doc.text(agLines[0] || clienteStr.toUpperCase(), pageW - margin - 41, y + 16.5, { align: "center" });
+          y += 29;
+        } else {
+          doc.addImage(LOGO_BASE64, "JPEG", (pageW - 96) / 2, y, 96, 30);
+          y += 35;
+        }
+      } catch (e) { y += 18; }
+
+      doc.setDrawColor(7, 19, 58);
+      doc.setLineWidth(0.6);
+      doc.line(margin, y, pageW - margin, y);
+      y += 8;
+
+      const ensureSpace = (neededMm) => { if (y + neededMm > pageH - 18) { doc.addPage(); y = 18; } };
+
+      doc.setTextColor(15, 23, 42);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("ORÇAMENTO DE CONSERTOS, REPAROS, HIGIENIZAÇÕES E LIMPEZAS", margin, y);
+      y += 7;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10.5);
+      const imovelLines = doc.splitTextToSize(`Imóvel: ${job.imovel || "A definir"}`, maxW);
+      doc.text(imovelLines, margin, y);
+      y += imovelLines.length * 5.2 + 1.5;
+
+      doc.text(isImob ? `Imobiliária : ${clienteStr}` : "Atendimento : Particular", margin, y);
+      y += 5.5;
+      if (job.inquilinoNome || job.inquilinoCpf) {
+        doc.text(`Inquilino: ${job.inquilinoNome || "-"}${job.inquilinoCpf ? " | CPF: " + job.inquilinoCpf : ""}`, margin, y);
+        y += 5.5;
+      }
+
+      y += 2;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.text("DOS VALORES DO ORÇAMENTO", margin, y);
+      y += 6;
+
+      const comodos = Array.isArray(job.comodos) ? job.comodos : [];
+      const providerTotals = {};
+      let calcTotalMat = 0, calcTotalMao = 0, itemSeq = 0;
+
+      const drawTableHeader = () => {
+        ensureSpace(12);
+        doc.setFillColor(7, 19, 58);
+        doc.rect(margin, y, maxW, 7, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.2);
+        doc.text("ITEM / DESCRIÇÃO DO SERVIÇO", margin + 2, y + 4.8);
+        doc.text("MATERIAL", margin + 104, y + 4.8, { align: "right" });
+        doc.text("MÃO DE OBRA", margin + 138, y + 4.8, { align: "right" });
+        doc.text("SUBTOTAL", pageW - margin - 2, y + 4.8, { align: "right" });
+        y += 8.5;
+      };
+
+      comodos.forEach((c) => {
+        ensureSpace(18);
+        doc.setFillColor(241, 245, 249);
+        doc.rect(margin, y, maxW, 6.5, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9.2);
+        doc.setTextColor(7, 19, 58);
+        doc.text(String(c.nome || "SERVIÇOS").toUpperCase(), margin + 2, y + 4.5);
+        y += 7.5;
+        drawTableHeader();
+
+        (c.itens || []).forEach((it) => {
+          itemSeq++;
+          const iMat = Number(it.valorMaterial || 0);
+          const iMao = Number(it.valorMaoDeObra || 0);
+          const iTot = Number(it.valor || (iMat + iMao));
+          calcTotalMat += iMat; calcTotalMao += iMao;
+          if (iMao > 0 && it.prestador) {
+            const pName = String(it.prestador).trim();
+            providerTotals[pName] = (providerTotals[pName] || 0) + iMao;
+          }
+          const descBase = `${itemSeq}. ${it.descricao || ""}${it.prestador ? " (Prestador: " + it.prestador + ")" : ""}`;
+          const wrapped = doc.splitTextToSize(descBase, 78);
+          const rowH = Math.max(6.5, wrapped.length * 4.3 + 2.5);
+          if (y + rowH > pageH - 22) { doc.addPage(); y = 18; drawTableHeader(); }
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8.8);
+          doc.setTextColor(15, 23, 42);
+          doc.text(wrapped, margin + 2, y + 4.2);
+          doc.text(iMat > 0 ? formatCurrencyBr(iMat) : "-", margin + 104, y + 4.2, { align: "right" });
+          doc.text(iMao > 0 ? formatCurrencyBr(iMao) : "-", margin + 138, y + 4.2, { align: "right" });
+          doc.setFont("helvetica", "bold");
+          doc.text(iTot > 0 ? formatCurrencyBr(iTot) : "A cotar", pageW - margin - 2, y + 4.2, { align: "right" });
+          doc.setDrawColor(226, 232, 240);
+          doc.setLineWidth(0.25);
+          doc.line(margin, y + rowH, pageW - margin, y + rowH);
+          y += rowH + 0.5;
+        });
+        y += 3;
+      });
+
+      const finalMat = vMat > 0 ? vMat : calcTotalMat;
+      const finalMao = vMao > 0 ? vMao : calcTotalMao;
+      const finalTot = vTot > 0 ? vTot : (finalMat + finalMao);
+
+      ensureSpace(38);
+      y += 2;
+      doc.setDrawColor(7, 19, 58);
+      doc.setLineWidth(0.6);
+      doc.line(margin, y, pageW - margin, y);
+      y += 7;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`TOTAL DE MATERIAIS: ${formatCurrencyBr(finalMat)}`, margin, y); y += 5.5;
+      doc.text(`TOTAL DE MÃO DE OBRA: ${formatCurrencyBr(finalMao)}`, margin, y); y += 5.5;
+      const provEntries = Object.entries(providerTotals);
+      if (provEntries.length > 0) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.2);
+        const provWrapped = doc.splitTextToSize("Mão de obra por prestador: " + provEntries.map(([k, v]) => `${k}: ${formatCurrencyBr(v)}`).join(" | "), maxW);
+        doc.text(provWrapped, margin, y);
+        y += provWrapped.length * 4.5 + 2;
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(7, 19, 58);
+      doc.text(`VALOR TOTAL GERAL: ${formatCurrencyBr(finalTot)}`, margin, y); y += 7;
+      if (job.prazoExecucao) { doc.setFontSize(10); doc.setTextColor(15, 23, 42); doc.text(String(job.prazoExecucao), margin, y); y += 6; }
+      if (job.obsRessalvas) {
+        const obsLines = doc.splitTextToSize(`OBS : ${job.obsRessalvas}`, maxW);
+        doc.setFontSize(9.5); doc.text(obsLines, margin, y); y += obsLines.length * 4.8 + 4;
+      }
+      ensureSpace(28);
+      y += 6;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+      doc.text(formatLongDatePtBr(job.dataEmissao), margin, y); y += 8;
+      doc.setFont("helvetica", "bold"); doc.text(String(appSettings.responsavel || RESPONSAVEL_PADRAO), margin, y); y += 5;
+      doc.setFont("helvetica", "normal"); doc.text(String(appSettings.telefone || TELEFONE_PADRAO), margin, y); y += 5;
+      doc.text(String(appSettings.creci || CNPJ_TOTAL_SERVICE), margin, y);
+      return doc;
+    }
+
+    async function buildBudgetFilesPayload(job) {
+      const out = { pdfBase64: "", imgBase64: "", docBase64: "" };
+      try {
+        const pdfDoc = await buildPdfDocForJob(job, "PARTICULAR");
+        if (pdfDoc) out.pdfBase64 = pdfDoc.output("datauristring");
+      } catch (e) {}
+      try {
+        const docHtml = buildGoogleDocHtmlString(job);
+        const utf8Bytes = new TextEncoder().encode("\ufeff" + docHtml);
+        let bin = "";
+        utf8Bytes.forEach(b => { bin += String.fromCharCode(b); });
+        out.docBase64 = "data:application/msword;base64," + btoa(bin);
+      } catch (e) {}
+      try {
+        const cnv = await renderBudgetCanvas(job);
+        if (cnv) out.imgBase64 = cnv.toDataURL("image/jpeg", 0.88);
+      } catch (e) {}
+      return out;
+    }
+
+
     async function saveAndSyncJob(job) {
       safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
       renderSavedJobs();
       const gasUrl = getGasUrl();
       if (!gasUrl || !navigator.onLine) return;
       try {
+        const filesPayload = await buildBudgetFilesPayload(job);
+        const recordToSend = { ...job, ...filesPayload };
         const resp = await fetch(gasUrl, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "syncRecord", record: job })
+          body: JSON.stringify({ action: "syncRecord", record: recordToSend })
         });
         const res = await resp.json();
         if (res && res.ok) {
@@ -1439,6 +1647,10 @@ ${text || "(Ver arquivos PDF/fotos anexados)"}`;
       try {
         const resp = await fetch(gasUrl + "?action=loadAll");
         const data = await resp.json();
+        if (data && data.ok && data.geminiApiKey && !getGeminiApiKey()) {
+          appSettings.geminiApiKey = String(data.geminiApiKey).trim();
+          safeStorageSet(STORAGE_KEYS.SETTINGS, appSettings);
+        }
         if (data && data.ok && Array.isArray(data.records) && data.records.length > 0) {
           jobsList = data.records;
           safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
@@ -1896,6 +2108,91 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 4000);
       showToast("Arquivo TXT baixado!", "success");
+    }
+
+    function buildGoogleDocHtmlString(job) {
+      const clienteStr = String(job.clienteOuImobiliaria || "Particular").trim();
+      const isImob = clienteStr && !/^particular$/i.test(clienteStr);
+      const comodos = Array.isArray(job.comodos) ? job.comodos : [];
+      let calcMat = 0, calcMao = 0, seq = 0;
+      const rowsHtml = comodos.map(c => {
+        const headerRow = `<tr style="background:#F1F5F9;"><td colspan="4" style="padding:7px 8px;font-weight:bold;color:#07133A;border:1px solid #CBD5E1;">${escapeHtml(String(c.nome || "SERVIÇOS").toUpperCase())}</td></tr>`;
+        const itemRows = (c.itens || []).map(it => {
+          seq++;
+          const iMat = Number(it.valorMaterial || 0), iMao = Number(it.valorMaoDeObra || 0), iTot = Number(it.valor || (iMat + iMao));
+          calcMat += iMat; calcMao += iMao;
+          return `<tr><td style="padding:6px 8px;border:1px solid #E2E8F0;">${escapeHtml(`${seq}. ${it.descricao || ""}${it.prestador ? " (Prestador: " + it.prestador + ")" : ""}`)}</td><td style="padding:6px 8px;border:1px solid #E2E8F0;text-align:right;">${iMat > 0 ? formatCurrencyBr(iMat) : "-"}</td><td style="padding:6px 8px;border:1px solid #E2E8F0;text-align:right;">${iMao > 0 ? formatCurrencyBr(iMao) : "-"}</td><td style="padding:6px 8px;border:1px solid #E2E8F0;text-align:right;font-weight:bold;">${iTot > 0 ? formatCurrencyBr(iTot) : "A cotar"}</td></tr>`;
+        }).join("");
+        return headerRow + itemRows;
+      }).join("");
+      const finalMat = Number(job.valorMaterial) > 0 ? Number(job.valorMaterial) : calcMat;
+      const finalMao = Number(job.valorMaoDeObra) > 0 ? Number(job.valorMaoDeObra) : calcMao;
+      const finalTot = Number(job.valorTotal) > 0 ? Number(job.valorTotal) : (finalMat + finalMao);
+      return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Orçamento Tot@l Service</title></head><body style="font-family:Arial,sans-serif;color:#0F172A;margin:28px;"><div style="text-align:center;border-bottom:2px solid #07133A;padding-bottom:12px;margin-bottom:16px;"><img src="${LOGO_BASE64}" width="260" alt="Tot@l Service" />${isImob ? `<div style="margin-top:6px;font-weight:bold;color:#07133A;">IMOBILIÁRIA PARCEIRA: ${escapeHtml(clienteStr.toUpperCase())}</div>` : ""}</div><p style="font-weight:bold;font-size:12pt;">ORÇAMENTO DE CONSERTOS, REPAROS, HIGIENIZAÇÕES E LIMPEZAS</p><p><b>Imóvel:</b> ${escapeHtml(job.imovel || "A definir")}<br/><b>${isImob ? "Imobiliária" : "Atendimento"}:</b> ${escapeHtml(clienteStr)}</p><table style="width:100%;border-collapse:collapse;font-size:10.5pt;"><thead><tr style="background:#07133A;color:#FFF;"><th style="padding:7px 8px;text-align:left;">ITEM / DESCRIÇÃO</th><th style="padding:7px 8px;text-align:right;">MATERIAL</th><th style="padding:7px 8px;text-align:right;">MÃO DE OBRA</th><th style="padding:7px 8px;text-align:right;">SUBTOTAL</th></tr></thead><tbody>${rowsHtml}</tbody></table><div style="margin-top:16px;border-top:2px solid #07133A;padding-top:10px;"><p><b>TOTAL DE MATERIAIS:</b> ${formatCurrencyBr(finalMat)}<br/><b>TOTAL DE MÃO DE OBRA:</b> ${formatCurrencyBr(finalMao)}<br/><b style="font-size:13pt;color:#07133A;">VALOR TOTAL GERAL: ${formatCurrencyBr(finalTot)}</b></p>${job.prazoExecucao ? `<p><b>${escapeHtml(job.prazoExecucao)}</b></p>` : ""}${job.obsRessalvas ? `<p><b>OBS:</b> ${escapeHtml(job.obsRessalvas)}</p>` : ""}</div><p style="margin-top:20px;">${escapeHtml(formatLongDatePtBr(job.dataEmissao))}<br/><b>${escapeHtml(appSettings.responsavel || RESPONSAVEL_PADRAO)}</b><br/>${escapeHtml(appSettings.telefone || TELEFONE_PADRAO)}<br/>${escapeHtml(appSettings.creci || CNPJ_TOTAL_SERVICE)}</p></body></html>`;
+    }
+
+    async function renderBudgetCanvas(job) {
+      const W = 1240, margin = 80, maxW = W - margin * 2;
+      const tempCanvas = document.createElement("canvas");
+      const tCtx = tempCanvas.getContext("2d");
+      tCtx.font = "22px Arial, sans-serif";
+      const wrapTextLines = (ctx, text, width) => {
+        const words = String(text || "").split(/\s+/); const lines = []; let cur = "";
+        words.forEach(w => { const test = cur ? cur + " " + w : w; if (ctx.measureText(test).width > width && cur) { lines.push(cur); cur = w; } else cur = test; });
+        if (cur) lines.push(cur); return lines.length ? lines : [""];
+      };
+      const comodos = Array.isArray(job.comodos) ? job.comodos : [];
+      let estimatedH = 620, seqTest = 0;
+      comodos.forEach(c => { estimatedH += 90; (c.itens || []).forEach(it => { seqTest++; estimatedH += Math.max(46, wrapTextLines(tCtx, `${seqTest}. ${it.descricao || ""}`, 560).length * 28 + 20); }); });
+      estimatedH = Math.max(1754, estimatedH + 260);
+      const canvas = document.createElement("canvas"); canvas.width = W; canvas.height = estimatedH;
+      const ctx = canvas.getContext("2d"); ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, W, estimatedH);
+      let y = 60;
+      const clienteStr = String(job.clienteOuImobiliaria || "Particular").trim();
+      const isImob = clienteStr && !/^particular$/i.test(clienteStr);
+      await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          if (isImob) {
+            ctx.drawImage(img, margin, y, 420, 132);
+            ctx.fillStyle = "#07133A"; ctx.fillRect(W - margin - 460, y + 6, 460, 120);
+            ctx.fillStyle = "#DFC48B"; ctx.font = "bold 18px Arial, sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("IMOBILIÁRIA PARCEIRA", W - margin - 230, y + 46);
+            ctx.fillStyle = "#FFF"; ctx.font = "bold 26px Arial, sans-serif";
+            ctx.fillText(clienteStr.toUpperCase().slice(0, 28), W - margin - 230, y + 90);
+            ctx.textAlign = "left";
+          } else { ctx.drawImage(img, (W - 500) / 2, y, 500, 156); }
+          resolve();
+        };
+        img.onerror = resolve; img.src = LOGO_BASE64;
+      });
+      y += 180; ctx.strokeStyle = "#07133A"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(W - margin, y); ctx.stroke(); y += 42;
+      ctx.fillStyle = "#0F172A"; ctx.font = "bold 26px Arial, sans-serif"; ctx.fillText("ORÇAMENTO DE CONSERTOS, REPAROS, HIGIENIZAÇÕES E LIMPEZAS", margin, y); y += 40;
+      ctx.font = "24px Arial, sans-serif"; wrapTextLines(ctx, `Imóvel: ${job.imovel || "A definir"}`, maxW).forEach(ln => { ctx.fillText(ln, margin, y); y += 32; });
+      ctx.fillText(isImob ? `Imobiliária: ${clienteStr}` : "Atendimento: Particular", margin, y); y += 46;
+      let calcMat = 0, calcMao = 0, seq = 0;
+      comodos.forEach(c => {
+        ctx.fillStyle = "#F1F5F9"; ctx.fillRect(margin, y, maxW, 38); ctx.fillStyle = "#07133A"; ctx.font = "bold 22px Arial, sans-serif"; ctx.fillText(String(c.nome || "SERVIÇOS").toUpperCase(), margin + 12, y + 27); y += 44;
+        ctx.fillStyle = "#07133A"; ctx.fillRect(margin, y, maxW, 36); ctx.fillStyle = "#FFF"; ctx.font = "bold 19px Arial, sans-serif"; ctx.fillText("ITEM / DESCRIÇÃO", margin + 12, y + 25);
+        ctx.textAlign = "right"; ctx.fillText("MATERIAL", margin + 740, y + 25); ctx.fillText("MÃO DE OBRA", margin + 915, y + 25); ctx.fillText("SUBTOTAL", W - margin - 12, y + 25); ctx.textAlign = "left"; y += 44;
+        (c.itens || []).forEach(it => {
+          seq++; const iMat = Number(it.valorMaterial || 0), iMao = Number(it.valorMaoDeObra || 0), iTot = Number(it.valor || (iMat + iMao)); calcMat += iMat; calcMao += iMao;
+          ctx.font = "21px Arial, sans-serif"; const lns = wrapTextLines(ctx, `${seq}. ${it.descricao || ""}`, 560); const rowH = Math.max(44, lns.length * 28 + 14);
+          ctx.fillStyle = "#0F172A"; lns.forEach((ln, li) => ctx.fillText(ln, margin + 12, y + 26 + li * 28));
+          ctx.textAlign = "right"; ctx.fillText(iMat > 0 ? formatCurrencyBr(iMat) : "-", margin + 740, y + 26); ctx.fillText(iMao > 0 ? formatCurrencyBr(iMao) : "-", margin + 915, y + 26);
+          ctx.font = "bold 21px Arial, sans-serif"; ctx.fillText(iTot > 0 ? formatCurrencyBr(iTot) : "A cotar", W - margin - 12, y + 26); ctx.textAlign = "left";
+          y += rowH; ctx.strokeStyle = "#E2E8F0"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(W - margin, y); ctx.stroke(); y += 6;
+        });
+        y += 18;
+      });
+      const finalMat = Number(job.valorMaterial) > 0 ? Number(job.valorMaterial) : calcMat;
+      const finalMao = Number(job.valorMaoDeObra) > 0 ? Number(job.valorMaoDeObra) : calcMao;
+      const finalTot = Number(job.valorTotal) > 0 ? Number(job.valorTotal) : (finalMat + finalMao);
+      y += 14; ctx.strokeStyle = "#07133A"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(W - margin, y); ctx.stroke(); y += 40;
+      ctx.fillStyle = "#0F172A"; ctx.font = "bold 24px Arial, sans-serif"; ctx.fillText(`TOTAL DE MATERIAIS: ${formatCurrencyBr(finalMat)}`, margin, y); y += 34;
+      ctx.fillText(`TOTAL DE MÃO DE OBRA: ${formatCurrencyBr(finalMao)}`, margin, y); y += 36;
+      ctx.fillStyle = "#07133A"; ctx.font = "bold 28px Arial, sans-serif"; ctx.fillText(`VALOR TOTAL GERAL: ${formatCurrencyBr(finalTot)}`, margin, y);
+      return canvas;
     }
 
     function downloadJobAsGoogleDoc(jobId) {
