@@ -578,31 +578,56 @@ Responda sempre em português do Brasil.`;
         contents: [{ role: "user", parts }]
       };
       if (jsonMode) {
-        bodyObj.generationConfig = { responseMimeType: "application/json", temperature: 0.2 };
+        bodyObj.generationConfig = { responseMimeType: "application/json" };
       }
 
-      const modelsToTry = ["gemini-3.8-flash", "gemini-2.5-flash"];
-      let lastErr = "Erro na IA";
+      const modelsToTry = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite"];
+      const errors = [];
+
+      const tryModel = async (mName) => {
+        const cleanName = String(mName || "").replace(/^models\//, "");
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${cleanName}:generateContent?key=${encodeURIComponent(apiKey)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(bodyObj)
+          }
+        );
+        const data = await resp.json();
+        if (resp.ok && !data.error) {
+          return { ok: true, text: data?.candidates?.[0]?.content?.parts?.[0]?.text || "" };
+        }
+        return { ok: false, err: `${cleanName}: ${data?.error?.message || "HTTP " + resp.status}` };
+      };
+
       for (const modelName of modelsToTry) {
         try {
-          const resp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(bodyObj)
-            }
-          );
-          const data = await resp.json();
-          if (resp.ok && !data.error) {
-            return data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          }
-          lastErr = data?.error?.message || `HTTP ${resp.status}`;
+          const res = await tryModel(modelName);
+          if (res.ok) return res.text;
+          errors.push(res.err);
         } catch (e) {
-          lastErr = e.message || "Falha de rede";
+          errors.push(`${modelName}: ${e.message || "Falha de rede"}`);
         }
       }
-      throw new Error(lastErr);
+
+      // Auto-descoberta dinâmica: consulta os modelos liberados para esta chave API
+      try {
+        const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+        const listData = await listResp.json();
+        const available = (listData.models || [])
+          .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes("generateContent"))
+          .map(m => String(m.name || "").replace(/^models\//, ""))
+          .filter(n => n && !modelsToTry.includes(n) && !n.includes("2.5-flash") && !n.includes("tts") && !n.includes("image"));
+        available.sort((a, b) => (b.includes("flash") ? 1 : 0) - (a.includes("flash") ? 1 : 0));
+        for (const dynModel of available.slice(0, 3)) {
+          const res = await tryModel(dynModel);
+          if (res.ok) return res.text;
+          errors.push(res.err);
+        }
+      } catch (e) {}
+
+      throw new Error(errors[0] || "Erro na IA");
     }
 
     function estimateByHistory(desc) {
