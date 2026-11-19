@@ -275,14 +275,35 @@ Material 850, mão de obra 650, prazo 10 dias.
         </div>
       </div>
 
-      <!-- Botões de PDF imediatos -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <button type="button" id="btnDownloadResPdfParticular" class="touch-btn bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-black rounded-2xl py-3.5 px-4 text-xs flex items-center justify-center gap-2 shadow-md">
-          <span>📄 Baixar PDF (Particular / Imob.)</span>
+      <!-- Botão de Edição Rápida + Exportações (PDF, Google Docs, PNG, JPG) -->
+      <div class="space-y-2">
+        <button type="button" id="btnEditCurrentJob" class="touch-btn w-full bg-amber-100 hover:bg-amber-200 text-amber-950 border-2 border-amber-400 font-black rounded-2xl py-3 px-4 text-xs flex items-center justify-center gap-2">
+          <span>✏️ Editar Itens / Valores / Dados deste Orçamento</span>
         </button>
-        <button type="button" id="btnDownloadResPdfSeguradora" class="touch-btn bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-300 font-extrabold rounded-2xl py-3.5 px-4 text-xs flex items-center justify-center gap-2">
-          <span>🛡️ Baixar PDF (Seguradora Item/Item)</span>
-        </button>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button type="button" id="btnDownloadResPdfParticular" class="touch-btn bg-[#07133A] hover:bg-slate-800 text-[#DFC48B] font-black rounded-2xl py-3.5 px-4 text-xs flex items-center justify-center gap-2 shadow-md">
+            <span>📄 Baixar PDF (Particular / Imob.)</span>
+          </button>
+          <button type="button" id="btnDownloadResPdfSeguradora" class="touch-btn bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-300 font-extrabold rounded-2xl py-3.5 px-4 text-xs flex items-center justify-center gap-2">
+            <span>🛡️ Baixar PDF (Seguradora)</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button type="button" id="btnDownloadResGdoc" class="touch-btn bg-blue-50 hover:bg-blue-100 text-blue-950 border border-blue-300 font-extrabold rounded-2xl py-2.5 px-2 text-[11px] flex items-center justify-center gap-1">
+            <span>📝 Google Docs</span>
+          </button>
+          <button type="button" id="btnDownloadResTxt" class="touch-btn bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-300 font-extrabold rounded-2xl py-2.5 px-2 text-[11px] flex items-center justify-center gap-1">
+            <span>📃 Baixar TXT</span>
+          </button>
+          <button type="button" id="btnDownloadResPng" class="touch-btn bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border border-emerald-300 font-extrabold rounded-2xl py-2.5 px-2 text-[11px] flex items-center justify-center gap-1">
+            <span>🖼️ Baixar PNG</span>
+          </button>
+          <button type="button" id="btnDownloadResJpg" class="touch-btn bg-purple-50 hover:bg-purple-100 text-purple-950 border border-purple-300 font-extrabold rounded-2xl py-2.5 px-2 text-[11px] flex items-center justify-center gap-1">
+            <span>📸 Baixar JPG</span>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -391,6 +412,66 @@ Material 850, mão de obra 650, prazo 10 dias.
       <div class="flex gap-2">
         <button type="button" data-close-modal="modalDeleteConfirm" class="touch-btn flex-1 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">Cancelar</button>
         <button type="button" id="btnConfirmPermanentDelete" class="touch-btn flex-1 rounded-xl bg-rose-600 text-white font-black text-xs">Confirmar Exclusão</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- =============================================================
+       MODAL DE EDIÇÃO COMPLETA DO ORÇAMENTO (SEM REFAZER DO ZERO)
+       ============================================================= -->
+  <div id="modalEditJob" class="hidden fixed inset-0 z-50 bg-slate-900/80 flex items-center justify-center p-3">
+    <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[90vh] overflow-hidden">
+      <div class="px-4 py-3 bg-[#07133A] text-white flex items-center justify-between">
+        <div>
+          <p class="text-[10px] font-bold text-[#DFC48B] uppercase tracking-wider">Ajuste Rápido sem Refazer</p>
+          <h3 class="text-sm font-black">✏️ Editar Orçamento</h3>
+        </div>
+        <button type="button" id="btnCloseEditModal" class="p-2 rounded-xl bg-white/10 text-white text-xs font-bold">✕</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-3 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">Imóvel / Endereço</label>
+            <input id="editJobImovel" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 font-semibold text-slate-900 outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">Cliente ou Imobiliária</label>
+            <input id="editJobCliente" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 font-semibold text-slate-900 outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">Inquilino (opcional)</label>
+            <input id="editJobInquilino" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 font-semibold text-slate-900 outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">Prazo (deixe vazio se sem prazo)</label>
+            <input id="editJobPrazo" type="text" placeholder="Ex: Prazo de execução 15 dias." class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 font-semibold text-slate-900 outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">Observações / Ressalvas (opcional)</label>
+          <input id="editJobObs" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 font-semibold text-slate-900 outline-none" />
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-slate-200">
+          <span class="font-black text-[#07133A] uppercase text-[11px]">Itens Discriminados (Edite ou Exclua)</span>
+          <button type="button" id="btnAddEditItem" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-extrabold text-[11px]">+ Adicionar Item</button>
+        </div>
+
+        <div id="editJobItemsContainer" class="space-y-2"></div>
+
+        <div class="bg-slate-100 p-3 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-2 font-black text-xs">
+          <span>Materiais: <b id="editSumMat" class="text-slate-900">R$ 0,00</b></span>
+          <span>Mão de Obra: <b id="editSumMao" class="text-amber-800">R$ 0,00</b></span>
+          <span class="text-[#07133A] text-sm">Total: <b id="editSumTot">R$ 0,00</b></span>
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" id="btnCancelEditModal" class="px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-xs">Cancelar</button>
+        <button type="button" id="btnSaveEditModal" class="px-5 py-2.5 rounded-xl bg-[#07133A] text-[#DFC48B] font-black text-xs shadow-md">💾 Salvar Alterações</button>
       </div>
     </div>
   </div>
@@ -578,7 +659,7 @@ Responda sempre em português do Brasil.`;
         contents: [{ role: "user", parts }]
       };
       if (jsonMode) {
-        bodyObj.generationConfig = { responseMimeType: "application/json" };
+        bodyObj.generationConfig = { responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "low" } };
       }
 
       const cachedModel = safeStorageGet("total_service_working_gemini_model", "");
@@ -586,9 +667,9 @@ Responda sempre em português do Brasil.`;
       const modelsToTry = cachedModel ? [cachedModel, ...baseModels.filter(m => m !== cachedModel)] : baseModels;
       const errors = [];
 
-      const fetchWithTimeout = async (url, opts, ms = 12000) => {
+      const fetchWithTimeout = async (url, opts, ms = 35000) => {
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), ms);
+        const timer = setTimeout(() => ctrl.abort(new Error("Tempo limite excedido (35s)")), ms);
         try {
           return await fetch(url, { ...opts, signal: ctrl.signal });
         } finally {
@@ -605,7 +686,7 @@ Responda sempre em português do Brasil.`;
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(bodyObj)
           },
-          12000
+          35000
         );
         const data = await resp.json();
         if (resp.ok && !data.error) {
@@ -712,7 +793,7 @@ Responda sempre em português do Brasil.`;
       if (endM) imovel = endM[0].trim();
       if (!imovel) {
         const firstLine = String(rawText || "").split(/\r?\n/)[0] || "";
-        imovel = firstLine.split(",")[0].trim().slice(0, 80) || "Endereço a confirmar";
+        imovel = firstLine.split(",")[0].trim().slice(0, 75) || "Imóvel a confirmar";
       }
 
       const cliente = detectAgencyName(cleanRaw);
@@ -721,22 +802,12 @@ Responda sempre em português do Brasil.`;
       const inqM = cleanRaw.match(/inquilino\s*[:\-]?\s*([A-Za-zÀ-ÿ\s]{3,40})/i);
       const inquilinoNome = inqM ? inqM[1].replace(/cpf.*/i, "").trim() : "";
 
-      let totalMat = 0;
-      let totalMao = 0;
-      const matMatches = [...cleanRaw.matchAll(/(?:r\$\s*([\d.,]+)\s*(?:de\s+)?material|material\s*[:\-]?\s*(?:de\s+)?r?\$?\s*([\d.,]+))/gi)];
-      matMatches.forEach(m => { totalMat += parseNum(m[1] || m[2]); });
-      const maoMatches = [...cleanRaw.matchAll(/(?:r\$\s*([\d.,]+)\s*(?:de\s+)?m[aã]o\s*de\s*obra|m[aã]o\s*de\s*obra\s*[:\-]?\s*(?:de\s+)?r?\$?\s*([\d.,]+))/gi)];
-      maoMatches.forEach(m => { totalMao += parseNum(m[1] || m[2]); });
-
-      const serviceVerbs = /(trocar|troca|substitu|pintar|pintura|consert|repar|arrum|instal|limp|higieniz|enca|fia[cç][aã]o|el[eé]tric|hidr[aá]ul|telhad|calha|vazament|porta|janela|fechadura|tomada|interruptor|torneira|pia|vaso|gabinete|arm[aá]rio|piso|azulejo|vidro|gesso|muro|port[aã]o)/i;
+      const serviceVerbs = /(trocar|troca|substitu|pintar|pintura|consert|repar|arrum|instal|limp|higieniz|enca|fia[cç][aã]o|el[eé]tric|hidr[aá]ul|telhad|calha|vazament|porta|janela|fechadura|tomada|interruptor|torneira|pia|vaso|gabinete|arm[aá]rio|piso|azulejo|vidro|gesso|muro|port[aã]o|mangueira|sof[aá]|cadeira|mesa|tinta|lata|alvenaria|trinc|reforma|faxin|cotar|cota[cç][aã]o)/i;
       const noiseRe = /(recadinho|campanha\s+de\s+ora[cç]|mam[aã]e|orar|ora[cç][õo]es|bom\s+dia|boa\s+tarde|oi\s+tudo\s+bem|programa)/i;
+      const providerRe = /\b(pintor|eletricista|encanador|pedreiro|marceneiro|vidraceiro|serralheiro|faxineira|diarista|jardineiro|gesseiro)\b/i;
 
-      const chunks = String(rawText || "")
-        .split(/(?:\r?\n|;|\.|\b(?:trocar|fazer|consertar|instalar|pintar|arrumar|limpar|substituir)\b)/i);
-
-      // Re-split keeping action verbs cleanly by sentence/line or before action verbs
       const rawSegments = String(rawText || "")
-        .replace(/\s+(trocar|fazer|consertar|instalar|pintar|arrumar|limpar|substituir)\s+/gi, "\n$1 ")
+        .replace(/\s+(trocar|troca\s+de|fazer|consertar|instalar|pintar|pintura|arrumar|limpar|limpeza|substituir|cotar|reforma)\s+/gi, "\n$1 ")
         .split(/\r?\n|;/)
         .map(s => s.trim())
         .filter(Boolean);
@@ -744,6 +815,32 @@ Responda sempre em português do Brasil.`;
       const roomKeys = ["HALL", "SALA", "LAVABO", "QUARTO", "SUÍTE", "SUITE", "BANHEIRO", "COZINHA", "ÁREA", "AREA", "GARAGEM", "LAVANDERIA", "QUINTAL", "TELHADO", "CANIL"];
       const comodos = [];
       let curRoom = null;
+
+      const extractClausePrices = (seg) => {
+        let mat = 0, mao = 0;
+        const mMat = [...seg.matchAll(/(?:r\$\s*([\d.,]+)\s*(?:de\s+)?material|material\s*[:\-]?\s*(?:de\s+)?r?\$?\s*([\d.,]+))/gi)];
+        mMat.forEach(m => { mat += parseNum(m[1] || m[2]); });
+        const mMao = [...seg.matchAll(/(?:r\$\s*([\d.,]+)\s*(?:de\s+)?m[aã]o\s*de\s*obra|m[aã]o\s*de\s*obra\s*[:\-]?\s*(?:de\s+)?r?\$?\s*([\d.,]+))/gi)];
+        mMao.forEach(m => { mao += parseNum(m[1] || m[2]); });
+        const qtyUnit = seg.match(/(\d+)\s*(?:latas?|unidades?|pe[çc]as?|cadeiras?|mesas?|tomadas?|torneiras?)[^.\n]{0,40}?cada[^.\n]{0,20}?r?\$?\s*([\d.,]+)/i);
+        if (qtyUnit) {
+          const q = parseInt(qtyUnit[1], 10) || 1;
+          const u = parseNum(qtyUnit[2]);
+          if (u > 0 && mat === 0) mat = q * u;
+        }
+        if (mat === 0 && mao === 0) {
+          if (/faxin|limp|m[aã]o\s*de\s*obra|pintor|eletricista|encanador|pedreiro/i.test(seg)) {
+            const pMao = seg.match(/r\$\s*([\d.,]+)/i);
+            if (pMao) mao = parseNum(pMao[1]);
+          } else {
+            const singlePrice = seg.match(/r\$\s*([\d.,]+)/i);
+            if (singlePrice) mat = parseNum(singlePrice[1]);
+          }
+        }
+        const pM = seg.match(providerRe);
+        const prestador = pM ? (pM[1].charAt(0).toUpperCase() + pM[1].slice(1).toLowerCase()) : "";
+        return { mat, mao, prestador };
+      };
 
       rawSegments.forEach(seg => {
         if (noiseRe.test(seg) && !serviceVerbs.test(seg)) return;
@@ -755,24 +852,36 @@ Responda sempre em português do Brasil.`;
           curRoom = { id: "rm-" + (comodos.length + 1), nome: rName, itens: [], fotos: [] };
           comodos.push(curRoom);
           const rest = seg.slice(idx + 1).trim();
-          if (rest && serviceVerbs.test(rest)) {
+          if (rest) {
             const desc = cleanPortugueseService(rest);
             if (desc) {
-              const est = estimateByHistory(desc);
-              curRoom.itens.push({ descricao: desc, valorMaterial: est.mat, valorMaoDeObra: est.mao, valor: est.mat + est.mao });
+              const pr = extractClausePrices(rest);
+              curRoom.itens.push({
+                descricao: desc,
+                prestador: pr.prestador,
+                valorMaterial: pr.mat,
+                valorMaoDeObra: pr.mao,
+                valor: pr.mat + pr.mao
+              });
             }
           }
           return;
         }
-        if (serviceVerbs.test(seg)) {
+        if (serviceVerbs.test(seg) || /r\$\s*[\d.,]+/i.test(seg)) {
           if (!curRoom) {
             curRoom = { id: "rm-1", nome: "SERVIÇOS GERAIS", itens: [], fotos: [] };
             comodos.push(curRoom);
           }
           const desc = cleanPortugueseService(seg);
-          if (desc && desc.length > 5) {
-            const est = estimateByHistory(desc);
-            curRoom.itens.push({ descricao: desc, valorMaterial: est.mat, valorMaoDeObra: est.mao, valor: est.mat + est.mao });
+          if (desc && desc.length > 3) {
+            const pr = extractClausePrices(seg);
+            curRoom.itens.push({
+              descricao: desc,
+              prestador: pr.prestador,
+              valorMaterial: pr.mat,
+              valorMaoDeObra: pr.mao,
+              valor: pr.mat + pr.mao
+            });
           }
         }
       });
@@ -781,17 +890,22 @@ Responda sempre em português do Brasil.`;
         comodos.push({
           id: "rm-1",
           nome: "SERVIÇOS GERAIS",
-          itens: [{ descricao: cleanPortugueseService(cleanRaw) || "Manutenção e reparos gerais no imóvel.", valorMaterial: totalMat || 250, valorMaoDeObra: totalMao || 250, valor: (totalMat + totalMao) || 500 }],
+          itens: [{
+            descricao: cleanPortugueseService(cleanRaw) || "Itens conforme solicitação.",
+            prestador: "",
+            valorMaterial: 0,
+            valorMaoDeObra: 0,
+            valor: 0
+          }],
           fotos: []
         });
       }
 
-      if (totalMat === 0 && totalMao === 0) {
-        comodos.forEach(c => c.itens.forEach(it => {
-          totalMat += Number(it.valorMaterial || 0);
-          totalMao += Number(it.valorMaoDeObra || 0);
-        }));
-      }
+      let totalMat = 0, totalMao = 0;
+      comodos.forEach(c => c.itens.forEach(it => {
+        totalMat += Number(it.valorMaterial || 0);
+        totalMao += Number(it.valorMaoDeObra || 0);
+      }));
 
       return {
         imovel,
@@ -799,15 +913,14 @@ Responda sempre em português do Brasil.`;
         inquilinoNome,
         inquilinoCpf,
         tipoDestinatario: /seguradora|porto seguro|tokio|liberty/i.test(cleanRaw) ? "SEGURADORA" : "PARTICULAR",
-        prazoExecucao: "Prazo de execução 15 dias.",
+        prazoExecucao: (cleanRaw.match(/prazo[^.\n,;]{0,35}\d+\s*dias?/i) ? `Prazo de execução ${cleanRaw.match(/prazo[^.\n,;]{0,35}(\d+\s*dias?)/i)[1]}.` : ""),
         obsRessalvas: "",
-        valorMaterial: Math.round(totalMat),
-        valorMaoDeObra: Math.round(totalMao),
-        valorTotal: Math.round(totalMat + totalMao),
+        valorMaterial: Math.round(totalMat * 100) / 100,
+        valorMaoDeObra: Math.round(totalMao * 100) / 100,
+        valorTotal: Math.round((totalMat + totalMao) * 100) / 100,
         comodos
       };
     }
-
     async function processMagicInputAndGenerate() {
       const text = (document.getElementById("magicPromptBox")?.value || "").trim();
       if (!text && magicAttachedFiles.length === 0) {
@@ -831,12 +944,14 @@ Responda sempre em português do Brasil.`;
             if (m) parts.push({ inlineData: { mimeType: m[1], data: m[2] } });
           });
 
-                    const prompt = `Organize o texto e/ou arquivos anexados em um orçamento oficial da Tot@l Service.
+                    const prompt = `Organize o texto e/ou arquivos anexados em um orçamento discriminado oficial da Tot@l Service (estilo nota fiscal).
 REGRAS OBRIGATÓRIAS:
-1. CORRIJA TODOS OS ERROS DE PORTUGUÊS, ortografia e pontuação, reescrevendo cada serviço em linguagem técnica profissional (ex: "Substituição de encanamento hidráulico.", "Troca completa da fiação elétrica da residência.", "Pintura interna completa da residência.").
-2. DESCARTE E IGNORE completamente frases de conversa paralela, recados pessoais ou ruídos de microfone que não sejam serviços do imóvel (ex: "chegou um recadinho", "campanha de oração", etc.).
-3. SOME CORRETAMENTE os valores de Material e Mão de Obra de todos os itens citados no texto. Se algum item não tiver valor citado, estime com base no histórico interno abaixo. Garanta que valorTotal = valorMaterial + valorMaoDeObra.
-4. Identifique se há uma Imobiliária no texto (ex: Imobiliária Grizoni, Concreto Imóveis, etc.) ou coloque "Particular".
+1. PROIBIDO INVENTAR, ESTIMAR OU BUSCAR PREÇOS: Use EXCLUSIVAMENTE os valores exatos que a pessoa escreveu, falou ou anexou. Se um item não tiver preço informado no texto/anexo, deixe valorMaterial: 0, valorMaoDeObra: 0 e valor: 0 (NUNCA alucine preços).
+2. DISCRIMINE TODOS OS ITENS E MATERIAIS EM LISTA: Se houver objetos ou materiais (ex: latas de tinta, cadeira, mesa, sofá, mangueira, torneira, tomada, limpeza, alvenaria), crie UM ITEM SEPARADO para cada serviço/objeto com seu respectivo valorMaterial, valorMaoDeObra e valor (valor = valorMaterial + valorMaoDeObra). Se houver quantidade × valor unitário (ex: "5 latas que cada uma custa R$ 500"), multiplique corretamente (5 × 500 = 2500 em valorMaterial) e descreva a quantidade na descrição.
+3. MÚLTIPLOS PRESTADORES DE SERVIÇO: Se o texto citar mais de um prestador (ex: pintor, encanador, eletricista, pedreiro, marceneiro), preencha o campo "prestador" em cada item com a função/nome do prestador responsável pela mão de obra daquele serviço (ou "" se não citado).
+4. CORRIJA TODOS OS ERROS DE PORTUGUÊS, ortografia e pontuação em linguagem técnica clara e profissional, e DESCARTE conversas paralelas ou ruídos de microfone que não sejam do orçamento.
+5. Identifique se há uma Imobiliária no texto ou coloque "Particular".
+6. NÃO invente prazo de execução: se não houver prazo citado no texto, retorne "prazoExecucao": "".
 
 Retorne EXCLUSIVAMENTE um JSON válido neste formato:
 {
@@ -845,20 +960,29 @@ Retorne EXCLUSIVAMENTE um JSON válido neste formato:
   "inquilinoNome": "nome do inquilino se houver",
   "inquilinoCpf": "CPF se houver",
   "tipoDestinatario": "SEGURADORA se mencionar seguradora, senão PARTICULAR",
-  "prazoExecucao": "ex: Prazo de execução 15 dias.",
+  "prazoExecucao": "somente se houver prazo citado no texto, senão vazio \"\"",
   "obsRessalvas": "ressalvas se houver",
   "valorMaterial": 0,
   "valorMaoDeObra": 0,
   "valorTotal": 0,
   "comodos": [
-    { "nome": "NOME DO CÔMODO EM MAIÚSCULO", "itens": [ { "descricao": "descrição técnica corrigida", "valorMaterial": 0, "valorMaoDeObra": 0, "valor": 0 } ] }
+    {
+      "nome": "NOME DO CÔMODO EM MAIÚSCULO",
+      "itens": [
+        {
+          "descricao": "descrição técnica corrigida do item/serviço",
+          "prestador": "ex: Pintor, Eletricista, Encanador ou vazio",
+          "valorMaterial": 0,
+          "valorMaoDeObra": 0,
+          "valor": 0
+        }
+      ]
+    }
   ]
 }
 
 Texto/áudio enviado pela Camila:
-${text || "(Ver arquivos PDF/fotos anexados)"}
-
-${buildInternalContextText()}`;
+${text || "(Ver arquivos PDF/fotos anexados)"}`;
 
           parts.push({ text: prompt });
           const raw = await callPrivateGemini(parts, true);
@@ -900,7 +1024,7 @@ ${buildInternalContextText()}`;
         valorMaterial: Number(parsed.valorMaterial) || 0,
         valorMaoDeObra: Number(parsed.valorMaoDeObra) || 0,
         valorTotal: Number(parsed.valorTotal) || ((Number(parsed.valorMaterial) || 0) + (Number(parsed.valorMaoDeObra) || 0)),
-        prazoExecucao: parsed.prazoExecucao || "Prazo de execução 15 dias.",
+        prazoExecucao: String(parsed.prazoExecucao || "").trim(),
         obsRessalvas: parsed.obsRessalvas || "",
         dataEmissao: new Date().toISOString().slice(0, 10),
         comodos: (parsed.comodos || []).map((c, idx) => ({
@@ -947,8 +1071,20 @@ ${buildInternalContextText()}`;
       sumEl.innerHTML = (job.comodos || []).map(rm => `
         <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
           <div class="font-black text-[#07133A] uppercase text-[11px]">${escapeHtml(rm.nome)}</div>
-          <ul class="list-disc pl-4 mt-1 space-y-0.5">
-            ${(rm.itens || []).map(it => `<li>${escapeHtml(it.descricao)} ${Number(it.valor) > 0 ? `<b>(${formatCurrencyBr(it.valor)})</b>` : ""}</li>`).join("")}
+          <ul class="list-disc pl-4 mt-1 space-y-1">
+            ${(rm.itens || []).map(it => {
+              const iMat = Number(it.valorMaterial || 0);
+              const iMao = Number(it.valorMaoDeObra || 0);
+              const iTot = Number(it.valor || (iMat + iMao));
+              const prest = it.prestador ? ` <span class="text-amber-800 font-bold">[${escapeHtml(it.prestador)}]</span>` : "";
+              const parts = [];
+              if (iMat > 0) parts.push("Mat: " + formatCurrencyBr(iMat));
+              if (iMao > 0) parts.push("M.O.: " + formatCurrencyBr(iMao));
+              const subTxt = iTot > 0
+                ? ` <span class="text-slate-600 text-[11px]">(${parts.join(" + ")}${parts.length ? " = " : ""}<b>${formatCurrencyBr(iTot)}</b>)</span>`
+                : ` <span class="text-slate-400 text-[11px]">(Sem valor informado)</span>`;
+              return `<li>${escapeHtml(it.descricao)}${prest}${subTxt}</li>`;
+            }).join("")}
           </ul>
         </div>
       `).join("");
@@ -1069,56 +1205,115 @@ ${buildInternalContextText()}`;
         doc.text("DOS VALORES DO ORÇAMENTO", margin, y);
         y += 6;
 
-        // Cômodos e lista de serviços
+        // Tabela discriminada estilo nota fiscal (suporta 40+ itens em múltiplas páginas)
         const comodos = Array.isArray(job.comodos) ? job.comodos : [];
-        comodos.forEach((c) => {
-          ensureSpace(14);
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(10);
-          doc.setTextColor(7, 19, 58);
-          doc.text(String(c.nome || "SERVIÇOS").toUpperCase(), margin, y);
-          y += 5.2;
+        const providerTotals = {};
+        let calcTotalMat = 0;
+        let calcTotalMao = 0;
 
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(10);
-          doc.setTextColor(15, 23, 42);
+        const drawTableHeader = () => {
+          ensureSpace(12);
+          doc.setFillColor(7, 19, 58);
+          doc.rect(margin, y, maxW, 7, "F");
+          doc.setTextColor(255, 255, 255);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(8.2);
+          doc.text("ITEM / DESCRIÇÃO DO SERVIÇO", margin + 2, y + 4.8);
+          doc.text("MATERIAL", margin + 104, y + 4.8, { align: "right" });
+          doc.text("MÃO DE OBRA", margin + 138, y + 4.8, { align: "right" });
+          doc.text("SUBTOTAL", pageW - margin - 2, y + 4.8, { align: "right" });
+          y += 8.5;
+        };
+
+        let itemSeq = 0;
+        comodos.forEach((c) => {
+          ensureSpace(18);
+          doc.setFillColor(241, 245, 249);
+          doc.rect(margin, y, maxW, 6.5, "F");
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9.2);
+          doc.setTextColor(7, 19, 58);
+          doc.text(String(c.nome || "SERVIÇOS").toUpperCase(), margin + 2, y + 4.5);
+          y += 7.5;
+
+          drawTableHeader();
 
           (c.itens || []).forEach((it) => {
-            let lineTxt = `• ${it.descricao || ""}`;
-            if (mode === "SEGURADORA") {
-              const itVal = Number(it.valor) || (Number(it.valorMaterial || 0) + Number(it.valorMaoDeObra || 0));
-              if (itVal > 0) lineTxt += ` — ${formatCurrencyBr(itVal)}`;
+            itemSeq++;
+            const iMat = Number(it.valorMaterial || 0);
+            const iMao = Number(it.valorMaoDeObra || 0);
+            const iTot = Number(it.valor || (iMat + iMao));
+            calcTotalMat += iMat;
+            calcTotalMao += iMao;
+            if (iMao > 0 && it.prestador) {
+              const pName = String(it.prestador).trim();
+              providerTotals[pName] = (providerTotals[pName] || 0) + iMao;
             }
-            const wrapped = doc.splitTextToSize(lineTxt, maxW - 4);
-            ensureSpace(wrapped.length * 4.8 + 2);
-            doc.text(wrapped, margin + 3, y);
-            y += wrapped.length * 4.8 + 1.2;
+
+            const descBase = `${itemSeq}. ${it.descricao || ""}${it.prestador ? " (Prestador: " + it.prestador + ")" : ""}`;
+            const wrapped = doc.splitTextToSize(descBase, 78);
+            const rowH = Math.max(6.5, wrapped.length * 4.3 + 2.5);
+
+            if (y + rowH > pageH - 22) {
+              doc.addPage();
+              y = 18;
+              drawTableHeader();
+            }
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8.8);
+            doc.setTextColor(15, 23, 42);
+            doc.text(wrapped, margin + 2, y + 4.2);
+
+            doc.setFont("helvetica", "normal");
+            doc.text(iMat > 0 ? formatCurrencyBr(iMat) : "-", margin + 104, y + 4.2, { align: "right" });
+            doc.text(iMao > 0 ? formatCurrencyBr(iMao) : "-", margin + 138, y + 4.2, { align: "right" });
+            doc.setFont("helvetica", "bold");
+            doc.text(iTot > 0 ? formatCurrencyBr(iTot) : "A cotar", pageW - margin - 2, y + 4.2, { align: "right" });
+
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.25);
+            doc.line(margin, y + rowH, pageW - margin, y + rowH);
+            y += rowH + 0.5;
           });
-          y += 2.5;
+          y += 3;
         });
 
-        // Totais (Material + Mão de Obra separados + Total Geral)
-        ensureSpace(34);
+        const finalMat = vMat > 0 ? vMat : calcTotalMat;
+        const finalMao = vMao > 0 ? vMao : calcTotalMao;
+        const finalTot = vTot > 0 ? vTot : (finalMat + finalMao);
+
+        // Totais (Material + Mão de Obra separados + por Prestador se houver + Total Geral)
+        ensureSpace(38);
         y += 2;
         doc.setDrawColor(7, 19, 58);
-        doc.setLineWidth(0.5);
+        doc.setLineWidth(0.6);
         doc.line(margin, y, pageW - margin, y);
         y += 7;
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10.5);
         doc.setTextColor(15, 23, 42);
-        if (vMat > 0) {
-          doc.text(`VALOR MATERIAL: ${formatCurrencyBr(vMat)}`, margin, y);
-          y += 5.5;
+        doc.text(`TOTAL DE MATERIAIS: ${formatCurrencyBr(finalMat)}`, margin, y);
+        y += 5.5;
+        doc.text(`TOTAL DE MÃO DE OBRA: ${formatCurrencyBr(finalMao)}`, margin, y);
+        y += 5.5;
+
+        const provEntries = Object.entries(providerTotals);
+        if (provEntries.length > 0) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9.2);
+          doc.setTextColor(51, 65, 85);
+          const provLine = "Mão de obra por prestador: " + provEntries.map(([k, v]) => `${k}: ${formatCurrencyBr(v)}`).join(" | ");
+          const provWrapped = doc.splitTextToSize(provLine, maxW);
+          doc.text(provWrapped, margin, y);
+          y += provWrapped.length * 4.5 + 2;
         }
-        if (vMao > 0) {
-          doc.text(`VALOR MÃO DE OBRA: ${formatCurrencyBr(vMao)}`, margin, y);
-          y += 5.5;
-        }
+
+        doc.setFont("helvetica", "bold");
         doc.setFontSize(12);
         doc.setTextColor(7, 19, 58);
-        doc.text(`VALOR TOTAL: ${formatCurrencyBr(vTot)}`, margin, y);
+        doc.text(`VALOR TOTAL GERAL: ${formatCurrencyBr(finalTot)}`, margin, y);
         y += 7;
 
         if (job.prazoExecucao) {
@@ -1254,6 +1449,7 @@ ${buildInternalContextText()}`;
             ${j.propertyFolderUrl ? `<a href="${escapeHtml(j.propertyFolderUrl)}" target="_blank" class="inline-block text-[11px] font-bold text-indigo-700 underline">📁 Abrir Pasta no Drive</a>` : ""}
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" data-quick-edit="${j.id}" class="px-2.5 py-2 rounded-xl bg-amber-100 text-amber-950 border border-amber-300 text-xs font-extrabold">✏️ Editar</button>
             <button type="button" data-quick-pdf="${j.id}" class="px-3 py-2 rounded-xl bg-[#07133A] text-[#DFC48B] text-xs font-extrabold">📄 PDF</button>
             <button type="button" data-quick-preview="${j.id}" class="px-3 py-2 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold">👁️ Ver</button>
             <button type="button" data-quick-del="${j.id}" class="px-2.5 py-2 rounded-xl bg-rose-50 text-rose-600 text-xs font-bold">🗑️</button>
@@ -1405,7 +1601,19 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
         if (job) { job.valorTotal = parseFloat(document.getElementById("resInputTot").value) || 0; saveAndSyncJob(job); }
       });
 
-      document.getElementById("btnDownloadResPdfParticular").addEventListener("click", () => generatePdfForJob(currentPreviewJobId, "PARTICULAR"));
+      document.getElementById("btnEditCurrentJob")?.addEventListener("click", () => currentPreviewJobId && openEditJobModal(currentPreviewJobId));
+      document.getElementById("btnDownloadResGdoc")?.addEventListener("click", () => currentPreviewJobId && downloadJobAsGoogleDoc(currentPreviewJobId));
+      document.getElementById("btnDownloadResTxt")?.addEventListener("click", () => currentPreviewJobId && downloadJobAsTxt(currentPreviewJobId));
+      document.getElementById("btnDownloadResPng")?.addEventListener("click", () => currentPreviewJobId && downloadJobAsImage(currentPreviewJobId, "png"));
+      document.getElementById("btnDownloadResJpg")?.addEventListener("click", () => currentPreviewJobId && downloadJobAsImage(currentPreviewJobId, "jpg"));
+      document.getElementById("btnCloseEditModal")?.addEventListener("click", () => document.getElementById("modalEditJob").classList.add("hidden"));
+      document.getElementById("btnCancelEditModal")?.addEventListener("click", () => document.getElementById("modalEditJob").classList.add("hidden"));
+      document.getElementById("btnSaveEditModal")?.addEventListener("click", saveEditJobModal);
+      document.getElementById("btnAddEditItem")?.addEventListener("click", () => {
+        editItemsDraft.push({ comodo: "SERVIÇOS GERAIS", descricao: "", prestador: "", valorMaterial: 0, valorMaoDeObra: 0 });
+        renderEditItemsList();
+      });
+      document.getElementById("btnDownloadResPdfParticular")?.addEventListener("click", () => currentPreviewJobId && generatePdfForJob(currentPreviewJobId, "RESUMIDO"));
       document.getElementById("btnDownloadResPdfSeguradora").addEventListener("click", () => generatePdfForJob(currentPreviewJobId, "SEGURADORA"));
       document.getElementById("btnCloseResultCard").addEventListener("click", () => document.getElementById("resultPreviewCard").classList.add("hidden"));
 
@@ -1414,6 +1622,8 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
       document.getElementById("savedJobsList").addEventListener("click", (e) => {
         const pdfId = e.target.closest("[data-quick-pdf]")?.getAttribute("data-quick-pdf");
         if (pdfId) { generatePdfForJob(pdfId, "PARTICULAR"); return; }
+        const editId = e.target.closest("[data-quick-edit]")?.getAttribute("data-quick-edit");
+        if (editId) { openEditJobModal(editId); return; }
         const prevId = e.target.closest("[data-quick-preview]")?.getAttribute("data-quick-preview");
         if (prevId) { const j = jobsList.find(x => x.id === prevId); if (j) showResultPreview(j); return; }
         const delId = e.target.closest("[data-quick-del]")?.getAttribute("data-quick-del");
@@ -1524,6 +1734,515 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
       renderSavedJobs();
       pullFromCloud(true);
     }
+
+
+    // =========================================================================
+    // EXPORTAÇÃO GOOGLE DOCS (.DOC), PNG E JPG + EDIÇÃO RÁPIDA DE ORÇAMENTO
+    // =========================================================================
+    function downloadJobAsTxt(jobId) {
+      const job = jobsList.find(j => j.id === jobId);
+      if (!job) { showToast("Orçamento não encontrado.", "error"); return; }
+      const comodos = Array.isArray(job.comodos) ? job.comodos : [];
+      let txt = "TOT@L SERVICE - PRESTAÇÃO DE SERVIÇOS\n";
+      txt += "ORÇAMENTO DE CONSERTOS, REPAROS, HIGIENIZAÇÕES E LIMPEZAS\n";
+      txt += "======================================================\n";
+      txt += `Imóvel: ${job.imovel || "A definir"}\n`;
+      txt += `Cliente/Imobiliária: ${job.clienteOuImobiliaria || "Particular"}\n`;
+      if (job.inquilinoNome || job.inquilinoCpf) {
+        txt += `Inquilino: ${job.inquilinoNome || "-"} ${job.inquilinoCpf ? "| CPF: " + job.inquilinoCpf : ""}\n`;
+      }
+      txt += "\nDOS VALORES DO ORÇAMENTO\n";
+      let seq = 0, calcMat = 0, calcMao = 0;
+      comodos.forEach(c => {
+        txt += `\n[ ${String(c.nome || "SERVIÇOS").toUpperCase()} ]\n`;
+        (c.itens || []).forEach(it => {
+          seq++;
+          const m = Number(it.valorMaterial || 0);
+          const mo = Number(it.valorMaoDeObra || 0);
+          const tot = Number(it.valor || (m + mo));
+          calcMat += m; calcMao += mo;
+          txt += `${seq}. ${it.descricao || ""}${it.prestador ? " (Prestador: " + it.prestador + ")" : ""}\n`;
+          txt += `   Material: ${m > 0 ? formatCurrencyBr(m) : "-"} | Mão de Obra: ${mo > 0 ? formatCurrencyBr(mo) : "-"} | Subtotal: ${tot > 0 ? formatCurrencyBr(tot) : "A cotar"}\n`;
+        });
+      });
+      const finalMat = Number(job.valorMaterial) > 0 ? Number(job.valorMaterial) : calcMat;
+      const finalMao = Number(job.valorMaoDeObra) > 0 ? Number(job.valorMaoDeObra) : calcMao;
+      const finalTot = Number(job.valorTotal) > 0 ? Number(job.valorTotal) : (finalMat + finalMao);
+      txt += "\n======================================================\n";
+      txt += `TOTAL DE MATERIAIS: ${formatCurrencyBr(finalMat)}\n`;
+      txt += `TOTAL DE MÃO DE OBRA: ${formatCurrencyBr(finalMao)}\n`;
+      txt += `VALOR TOTAL GERAL: ${formatCurrencyBr(finalTot)}\n`;
+      if (job.prazoExecucao) txt += `${job.prazoExecucao}\n`;
+      if (job.obsRessalvas) txt += `OBS: ${job.obsRessalvas}\n`;
+      txt += `\n${formatLongDatePtBr(job.dataEmissao)}\n`;
+      txt += `${appSettings.responsavel || RESPONSAVEL_PADRAO}\n${appSettings.telefone || TELEFONE_PADRAO}\n${appSettings.creci || CNPJ_TOTAL_SERVICE}\n`;
+
+      const fileName = `${String(job.imovel || "Orcamento").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 35)}.txt`;
+      const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      showToast("Arquivo TXT baixado!", "success");
+    }
+
+    function downloadJobAsGoogleDoc(jobId) {
+      const job = jobsList.find(j => j.id === jobId);
+      if (!job) { showToast("Orçamento não encontrado.", "error"); return; }
+
+      const clienteStr = String(job.clienteOuImobiliaria || "Particular").trim();
+      const isImob = clienteStr && !/^particular$/i.test(clienteStr);
+      const comodos = Array.isArray(job.comodos) ? job.comodos : [];
+      let calcMat = 0, calcMao = 0, seq = 0;
+      const providerTotals = {};
+
+      const rowsHtml = comodos.map(c => {
+        const headerRow = `<tr style="background:#F1F5F9;"><td colspan="4" style="padding:7px 8px;font-weight:bold;color:#07133A;border:1px solid #CBD5E1;">${escapeHtml(String(c.nome || "SERVIÇOS").toUpperCase())}</td></tr>`;
+        const itemRows = (c.itens || []).map(it => {
+          seq++;
+          const iMat = Number(it.valorMaterial || 0);
+          const iMao = Number(it.valorMaoDeObra || 0);
+          const iTot = Number(it.valor || (iMat + iMao));
+          calcMat += iMat;
+          calcMao += iMao;
+          if (iMao > 0 && it.prestador) {
+            const pN = String(it.prestador).trim();
+            providerTotals[pN] = (providerTotals[pN] || 0) + iMao;
+          }
+          const descTxt = `${seq}. ${it.descricao || ""}${it.prestador ? " (Prestador: " + it.prestador + ")" : ""}`;
+          return `<tr>
+            <td style="padding:6px 8px;border:1px solid #E2E8F0;">${escapeHtml(descTxt)}</td>
+            <td style="padding:6px 8px;border:1px solid #E2E8F0;text-align:right;">${iMat > 0 ? formatCurrencyBr(iMat) : "-"}</td>
+            <td style="padding:6px 8px;border:1px solid #E2E8F0;text-align:right;">${iMao > 0 ? formatCurrencyBr(iMao) : "-"}</td>
+            <td style="padding:6px 8px;border:1px solid #E2E8F0;text-align:right;font-weight:bold;">${iTot > 0 ? formatCurrencyBr(iTot) : "A cotar"}</td>
+          </tr>`;
+        }).join("");
+        return headerRow + itemRows;
+      }).join("");
+
+      const finalMat = Number(job.valorMaterial) > 0 ? Number(job.valorMaterial) : calcMat;
+      const finalMao = Number(job.valorMaoDeObra) > 0 ? Number(job.valorMaoDeObra) : calcMao;
+      const finalTot = Number(job.valorTotal) > 0 ? Number(job.valorTotal) : (finalMat + finalMao);
+      const provEntries = Object.entries(providerTotals);
+      const provHtml = provEntries.length > 0
+        ? `<p style="font-size:11pt;color:#334155;">Mão de obra por prestador: ${provEntries.map(([k, v]) => `${escapeHtml(k)}: ${formatCurrencyBr(v)}`).join(" | ")}</p>`
+        : "";
+
+      const docHtml = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="pt-BR">
+<head><meta charset="utf-8"><title>Orçamento Tot@l Service</title></head>
+<body style="font-family:Arial,sans-serif;color:#0F172A;margin:28px;">
+  <div style="text-align:center;border-bottom:2px solid #07133A;padding-bottom:12px;margin-bottom:16px;">
+    <img src="${LOGO_BASE64}" width="260" alt="Tot@l Service" />
+    ${isImob ? `<div style="margin-top:6px;font-weight:bold;color:#07133A;font-size:12pt;">IMOBILIÁRIA PARCEIRA: ${escapeHtml(clienteStr.toUpperCase())}</div>` : ""}
+  </div>
+  <p style="font-weight:bold;font-size:12pt;margin:0 0 8px 0;">ORÇAMENTO DE CONSERTOS, REPAROS, HIGIENIZAÇÕES E LIMPEZAS</p>
+  <p style="margin:3px 0;"><b>Imóvel:</b> ${escapeHtml(job.imovel || "A definir")}</p>
+  <p style="margin:3px 0;"><b>${isImob ? "Imobiliária" : "Atendimento"}:</b> ${escapeHtml(clienteStr)}</p>
+  ${(job.inquilinoNome || job.inquilinoCpf) ? `<p style="margin:3px 0;"><b>Inquilino:</b> ${escapeHtml(job.inquilinoNome || "-")} ${job.inquilinoCpf ? "| CPF: " + escapeHtml(job.inquilinoCpf) : ""}</p>` : ""}
+  <p style="font-weight:bold;margin:14px 0 6px 0;">DOS VALORES DO ORÇAMENTO</p>
+  <table style="width:100%;border-collapse:collapse;font-size:10.5pt;">
+    <thead>
+      <tr style="background:#07133A;color:#FFFFFF;">
+        <th style="padding:7px 8px;text-align:left;border:1px solid #07133A;">ITEM / DESCRIÇÃO DO SERVIÇO</th>
+        <th style="padding:7px 8px;text-align:right;border:1px solid #07133A;">MATERIAL</th>
+        <th style="padding:7px 8px;text-align:right;border:1px solid #07133A;">MÃO DE OBRA</th>
+        <th style="padding:7px 8px;text-align:right;border:1px solid #07133A;">SUBTOTAL</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+  <div style="margin-top:16px;border-top:2px solid #07133A;padding-top:10px;">
+    <p style="margin:3px 0;font-weight:bold;">TOTAL DE MATERIAIS: ${formatCurrencyBr(finalMat)}</p>
+    <p style="margin:3px 0;font-weight:bold;">TOTAL DE MÃO DE OBRA: ${formatCurrencyBr(finalMao)}</p>
+    ${provHtml}
+    <p style="margin:6px 0;font-weight:bold;font-size:13pt;color:#07133A;">VALOR TOTAL GERAL: ${formatCurrencyBr(finalTot)}</p>
+    ${job.prazoExecucao ? `<p style="margin:6px 0;font-weight:bold;">${escapeHtml(job.prazoExecucao)}</p>` : ""}
+    ${job.obsRessalvas ? `<p style="margin:6px 0;background:#FFFBEB;padding:8px;border:1px solid #F59E0B;"><b>OBS:</b> ${escapeHtml(job.obsRessalvas)}</p>` : ""}
+  </div>
+  <div style="margin-top:22px;">
+    <p style="margin:0 0 12px 0;">${escapeHtml(formatLongDatePtBr(job.dataEmissao))}</p>
+    <p style="margin:2px 0;font-weight:bold;">${escapeHtml(appSettings.responsavel || RESPONSAVEL_PADRAO)}</p>
+    <p style="margin:2px 0;">${escapeHtml(appSettings.telefone || TELEFONE_PADRAO)}</p>
+    <p style="margin:2px 0;">${escapeHtml(appSettings.creci || CNPJ_TOTAL_SERVICE)}</p>
+  </div>
+</body></html>`;
+
+      const fileName = `${String(job.imovel || "Orcamento").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 35)}_GoogleDocs.doc`;
+      const blob = new Blob(["\ufeff", docHtml], { type: "application/msword" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      showToast("Arquivo para Google Docs (.doc) baixado!", "success");
+    }
+
+    async function downloadJobAsImage(jobId, imgFormat = "png") {
+      const job = jobsList.find(j => j.id === jobId);
+      if (!job) { showToast("Orçamento não encontrado.", "error"); return; }
+      showToast(`Gerando imagem ${imgFormat.toUpperCase()}...`, "info");
+
+      try {
+        const W = 1240;
+        const margin = 80;
+        const maxW = W - margin * 2;
+
+        // Calcula altura necessária dinamicamente para caber todos os itens
+        const tempCanvas = document.createElement("canvas");
+        const tCtx = tempCanvas.getContext("2d");
+        tCtx.font = "22px Arial, sans-serif";
+
+        const wrapTextLines = (ctx, text, width) => {
+          const words = String(text || "").split(/\s+/);
+          const lines = [];
+          let cur = "";
+          words.forEach(w => {
+            const test = cur ? cur + " " + w : w;
+            if (ctx.measureText(test).width > width && cur) {
+              lines.push(cur);
+              cur = w;
+            } else {
+              cur = test;
+            }
+          });
+          if (cur) lines.push(cur);
+          return lines.length ? lines : [""];
+        };
+
+        const comodos = Array.isArray(job.comodos) ? job.comodos : [];
+        let estimatedH = 620;
+        let seqTest = 0;
+        comodos.forEach(c => {
+          estimatedH += 90;
+          (c.itens || []).forEach(it => {
+            seqTest++;
+            const dTxt = `${seqTest}. ${it.descricao || ""}${it.prestador ? " (Prestador: " + it.prestador + ")" : ""}`;
+            const lns = wrapTextLines(tCtx, dTxt, 560);
+            estimatedH += Math.max(46, lns.length * 28 + 20);
+          });
+        });
+        estimatedH = Math.max(1754, estimatedH + 260);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = W;
+        canvas.height = estimatedH;
+        const ctx = canvas.getContext("2d");
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, W, estimatedH);
+
+        let y = 60;
+        const clienteStr = String(job.clienteOuImobiliaria || "Particular").trim();
+        const isImob = clienteStr && !/^particular$/i.test(clienteStr);
+
+        // Desenha logo da Tot@l Service
+        await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            if (isImob) {
+              ctx.drawImage(img, margin, y, 420, 132);
+              ctx.fillStyle = "#07133A";
+              ctx.fillRect(W - margin - 460, y + 6, 460, 120);
+              ctx.strokeStyle = "#B6985A";
+              ctx.lineWidth = 4;
+              ctx.strokeRect(W - margin - 460, y + 6, 460, 120);
+              ctx.fillStyle = "#DFC48B";
+              ctx.font = "bold 18px Arial, sans-serif";
+              ctx.textAlign = "center";
+              ctx.fillText("IMOBILIÁRIA PARCEIRA", W - margin - 230, y + 46);
+              ctx.fillStyle = "#FFFFFF";
+              ctx.font = "bold 26px Arial, sans-serif";
+              ctx.fillText(clienteStr.toUpperCase().slice(0, 28), W - margin - 230, y + 90);
+              ctx.textAlign = "left";
+            } else {
+              ctx.drawImage(img, (W - 500) / 2, y, 500, 156);
+            }
+            resolve();
+          };
+          img.onerror = resolve;
+          img.src = LOGO_BASE64;
+        });
+
+        y += 180;
+        ctx.strokeStyle = "#07133A";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(W - margin, y); ctx.stroke();
+        y += 42;
+
+        ctx.fillStyle = "#0F172A";
+        ctx.font = "bold 26px Arial, sans-serif";
+        ctx.fillText("ORÇAMENTO DE CONSERTOS, REPAROS, HIGIENIZAÇÕES E LIMPEZAS", margin, y);
+        y += 40;
+
+        ctx.font = "24px Arial, sans-serif";
+        wrapTextLines(ctx, `Imóvel: ${job.imovel || "A definir"}`, maxW).forEach(ln => { ctx.fillText(ln, margin, y); y += 32; });
+        ctx.fillText(isImob ? `Imobiliária: ${clienteStr}` : "Atendimento: Particular", margin, y);
+        y += 34;
+        if (job.inquilinoNome || job.inquilinoCpf) {
+          ctx.fillText(`Inquilino: ${job.inquilinoNome || "-"} ${job.inquilinoCpf ? "| CPF: " + job.inquilinoCpf : ""}`, margin, y);
+          y += 34;
+        }
+
+        y += 16;
+        ctx.font = "bold 25px Arial, sans-serif";
+        ctx.fillText("DOS VALORES DO ORÇAMENTO", margin, y);
+        y += 34;
+
+        let calcMat = 0, calcMao = 0, seq = 0;
+        const providerTotals = {};
+
+        comodos.forEach(c => {
+          ctx.fillStyle = "#F1F5F9";
+          ctx.fillRect(margin, y, maxW, 38);
+          ctx.fillStyle = "#07133A";
+          ctx.font = "bold 22px Arial, sans-serif";
+          ctx.fillText(String(c.nome || "SERVIÇOS").toUpperCase(), margin + 12, y + 27);
+          y += 44;
+
+          ctx.fillStyle = "#07133A";
+          ctx.fillRect(margin, y, maxW, 36);
+          ctx.fillStyle = "#FFFFFF";
+          ctx.font = "bold 19px Arial, sans-serif";
+          ctx.fillText("ITEM / DESCRIÇÃO", margin + 12, y + 25);
+          ctx.textAlign = "right";
+          ctx.fillText("MATERIAL", margin + 740, y + 25);
+          ctx.fillText("MÃO DE OBRA", margin + 915, y + 25);
+          ctx.fillText("SUBTOTAL", W - margin - 12, y + 25);
+          ctx.textAlign = "left";
+          y += 44;
+
+          (c.itens || []).forEach(it => {
+            seq++;
+            const iMat = Number(it.valorMaterial || 0);
+            const iMao = Number(it.valorMaoDeObra || 0);
+            const iTot = Number(it.valor || (iMat + iMao));
+            calcMat += iMat; calcMao += iMao;
+            if (iMao > 0 && it.prestador) {
+              const pN = String(it.prestador).trim();
+              providerTotals[pN] = (providerTotals[pN] || 0) + iMao;
+            }
+
+            const dTxt = `${seq}. ${it.descricao || ""}${it.prestador ? " (Prestador: " + it.prestador + ")" : ""}`;
+            ctx.font = "21px Arial, sans-serif";
+            const lns = wrapTextLines(ctx, dTxt, 560);
+            const rowH = Math.max(44, lns.length * 28 + 14);
+
+            ctx.fillStyle = "#0F172A";
+            lns.forEach((ln, li) => ctx.fillText(ln, margin + 12, y + 26 + li * 28));
+
+            ctx.textAlign = "right";
+            ctx.fillText(iMat > 0 ? formatCurrencyBr(iMat) : "-", margin + 740, y + 26);
+            ctx.fillText(iMao > 0 ? formatCurrencyBr(iMao) : "-", margin + 915, y + 26);
+            ctx.font = "bold 21px Arial, sans-serif";
+            ctx.fillText(iTot > 0 ? formatCurrencyBr(iTot) : "A cotar", W - margin - 12, y + 26);
+            ctx.textAlign = "left";
+
+            y += rowH;
+            ctx.strokeStyle = "#E2E8F0";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(W - margin, y); ctx.stroke();
+            y += 6;
+          });
+          y += 18;
+        });
+
+        const finalMat = Number(job.valorMaterial) > 0 ? Number(job.valorMaterial) : calcMat;
+        const finalMao = Number(job.valorMaoDeObra) > 0 ? Number(job.valorMaoDeObra) : calcMao;
+        const finalTot = Number(job.valorTotal) > 0 ? Number(job.valorTotal) : (finalMat + finalMao);
+
+        y += 14;
+        ctx.strokeStyle = "#07133A";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(W - margin, y); ctx.stroke();
+        y += 40;
+
+        ctx.fillStyle = "#0F172A";
+        ctx.font = "bold 24px Arial, sans-serif";
+        ctx.fillText(`TOTAL DE MATERIAIS: ${formatCurrencyBr(finalMat)}`, margin, y); y += 34;
+        ctx.fillText(`TOTAL DE MÃO DE OBRA: ${formatCurrencyBr(finalMao)}`, margin, y); y += 36;
+        ctx.fillStyle = "#07133A";
+        ctx.font = "bold 28px Arial, sans-serif";
+        ctx.fillText(`VALOR TOTAL GERAL: ${formatCurrencyBr(finalTot)}`, margin, y); y += 42;
+
+        if (job.prazoExecucao) {
+          ctx.fillStyle = "#0F172A";
+          ctx.font = "bold 22px Arial, sans-serif";
+          ctx.fillText(String(job.prazoExecucao), margin, y);
+          y += 36;
+        }
+        if (job.obsRessalvas) {
+          ctx.fillStyle = "#0F172A";
+          ctx.font = "bold 20px Arial, sans-serif";
+          wrapTextLines(ctx, `OBS: ${job.obsRessalvas}`, maxW).forEach(ln => { ctx.fillText(ln, margin, y); y += 28; });
+          y += 16;
+        }
+
+        y += 28;
+        ctx.fillStyle = "#0F172A";
+        ctx.font = "22px Arial, sans-serif";
+        ctx.fillText(formatLongDatePtBr(job.dataEmissao), margin, y); y += 44;
+        ctx.font = "bold 22px Arial, sans-serif";
+        ctx.fillText(String(appSettings.responsavel || RESPONSAVEL_PADRAO), margin, y); y += 30;
+        ctx.font = "22px Arial, sans-serif";
+        ctx.fillText(String(appSettings.telefone || TELEFONE_PADRAO), margin, y); y += 30;
+        ctx.fillText(String(appSettings.creci || CNPJ_TOTAL_SERVICE), margin, y);
+
+        const mime = imgFormat === "jpg" ? "image/jpeg" : "image/png";
+        const ext = imgFormat === "jpg" ? "jpg" : "png";
+        const fileName = `${String(job.imovel || "Orcamento").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 35)}.${ext}`;
+        canvas.toBlob(async (blob) => {
+          if (!blob) { showToast("Erro ao gerar imagem.", "error"); return; }
+          const imgFile = new File([blob], fileName, { type: mime });
+          if (navigator.canShare && navigator.canShare({ files: [imgFile] })) {
+            try { await navigator.share({ title: fileName, files: [imgFile] }); return; } catch (e) {}
+          }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = fileName;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
+          showToast(`Imagem ${ext.toUpperCase()} baixada!`, "success");
+        }, mime, 0.95);
+      } catch (err) {
+        showToast("Erro ao gerar imagem: " + (err.message || err), "error");
+      }
+    }
+
+    let editingJobId = null;
+    let editItemsDraft = [];
+
+    function recalcEditSums() {
+      let mat = 0, mao = 0;
+      editItemsDraft.forEach(it => {
+        mat += Number(it.valorMaterial || 0);
+        mao += Number(it.valorMaoDeObra || 0);
+      });
+      document.getElementById("editSumMat").textContent = formatCurrencyBr(mat);
+      document.getElementById("editSumMao").textContent = formatCurrencyBr(mao);
+      document.getElementById("editSumTot").textContent = formatCurrencyBr(mat + mao);
+    }
+
+    function renderEditItemsList() {
+      const container = document.getElementById("editJobItemsContainer");
+      container.innerHTML = editItemsDraft.map((it, idx) => `
+        <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <input data-ei-idx="${idx}" data-ei-field="comodo" type="text" value="${escapeHtml(it.comodo || "SERVIÇOS GERAIS")}" placeholder="Cômodo" class="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-[11px] font-black uppercase text-[#07133A]" />
+            <button type="button" data-ei-del="${idx}" class="px-2.5 py-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 font-bold text-[11px]">🗑️</button>
+          </div>
+          <input data-ei-idx="${idx}" data-ei-field="descricao" type="text" value="${escapeHtml(it.descricao || "")}" placeholder="Descrição do serviço / item" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-900" />
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[9px] font-bold text-slate-500 uppercase">Prestador</label>
+              <input data-ei-idx="${idx}" data-ei-field="prestador" type="text" value="${escapeHtml(it.prestador || "")}" placeholder="Opcional" class="w-full px-2 py-1 rounded-lg border border-slate-300 bg-white text-[11px]" />
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-500 uppercase">Material R$</label>
+              <input data-ei-idx="${idx}" data-ei-field="valorMaterial" type="number" step="0.01" value="${Number(it.valorMaterial || 0)}" class="w-full px-2 py-1 rounded-lg border border-slate-300 bg-white text-[11px] font-bold text-right" />
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-amber-700 uppercase">M. Obra R$</label>
+              <input data-ei-idx="${idx}" data-ei-field="valorMaoDeObra" type="number" step="0.01" value="${Number(it.valorMaoDeObra || 0)}" class="w-full px-2 py-1 rounded-lg border border-amber-300 bg-white text-[11px] font-bold text-right" />
+            </div>
+          </div>
+        </div>
+      `).join("");
+
+      container.querySelectorAll("[data-ei-idx]").forEach(inp => {
+        inp.addEventListener("input", () => {
+          const i = Number(inp.dataset.eiIdx);
+          const fld = inp.dataset.eiField;
+          if (!editItemsDraft[i]) return;
+          if (fld === "valorMaterial" || fld === "valorMaoDeObra") {
+            editItemsDraft[i][fld] = parseFloat(inp.value) || 0;
+            recalcEditSums();
+          } else {
+            editItemsDraft[i][fld] = inp.value;
+          }
+        });
+      });
+
+      container.querySelectorAll("[data-ei-del]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          editItemsDraft.splice(Number(btn.dataset.eiDel), 1);
+          renderEditItemsList();
+          recalcEditSums();
+        });
+      });
+      recalcEditSums();
+    }
+
+    function openEditJobModal(jobId) {
+      const job = jobsList.find(j => j.id === jobId);
+      if (!job) return;
+      editingJobId = jobId;
+      document.getElementById("editJobImovel").value = job.imovel || "";
+      document.getElementById("editJobCliente").value = job.clienteOuImobiliaria || "Particular";
+      document.getElementById("editJobInquilino").value = job.inquilinoNome || "";
+      document.getElementById("editJobPrazo").value = job.prazoExecucao || "";
+      document.getElementById("editJobObs").value = job.obsRessalvas || "";
+
+      editItemsDraft = [];
+      (job.comodos || []).forEach(c => {
+        (c.itens || []).forEach(it => {
+          editItemsDraft.push({
+            comodo: c.nome || "SERVIÇOS GERAIS",
+            descricao: it.descricao || "",
+            prestador: it.prestador || "",
+            valorMaterial: Number(it.valorMaterial || 0),
+            valorMaoDeObra: Number(it.valorMaoDeObra || 0)
+          });
+        });
+      });
+      renderEditItemsList();
+      document.getElementById("modalEditJob").classList.remove("hidden");
+    }
+
+    function saveEditJobModal() {
+      const job = jobsList.find(j => j.id === editingJobId);
+      if (!job) return;
+      job.imovel = document.getElementById("editJobImovel").value.trim() || job.imovel;
+      job.clienteOuImobiliaria = document.getElementById("editJobCliente").value.trim() || "Particular";
+      job.inquilinoNome = document.getElementById("editJobInquilino").value.trim();
+      job.prazoExecucao = document.getElementById("editJobPrazo").value.trim();
+      job.obsRessalvas = document.getElementById("editJobObs").value.trim();
+
+      const roomMap = new Map();
+      let sumMat = 0, sumMao = 0;
+      editItemsDraft.forEach((it, idx) => {
+        const rName = String(it.comodo || "SERVIÇOS GERAIS").trim().toUpperCase();
+        if (!roomMap.has(rName)) {
+          roomMap.set(rName, { id: "rm-ed-" + idx, nome: rName, itens: [], fotos: [] });
+        }
+        const m = Number(it.valorMaterial || 0);
+        const mo = Number(it.valorMaoDeObra || 0);
+        sumMat += m; sumMao += mo;
+        roomMap.get(rName).itens.push({
+          descricao: String(it.descricao || "").trim(),
+          prestador: String(it.prestador || "").trim(),
+          valorMaterial: m,
+          valorMaoDeObra: mo,
+          valor: m + mo
+        });
+      });
+
+      job.comodos = Array.from(roomMap.values());
+      job.valorMaterial = Math.round(sumMat * 100) / 100;
+      job.valorMaoDeObra = Math.round(sumMao * 100) / 100;
+      job.valorTotal = Math.round((sumMat + sumMao) * 100) / 100;
+      job.updatedAt = new Date().toISOString();
+
+      saveAndSyncJob(job);
+      showResultPreview(job);
+      document.getElementById("modalEditJob").classList.add("hidden");
+      showToast("✅ Orçamento atualizado! Já pode baixar o novo PDF, Doc, PNG ou JPG.", "success");
+    }
+
 
     window.addEventListener("DOMContentLoaded", initApp);
   </script>
