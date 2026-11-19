@@ -967,6 +967,7 @@ REGRAS OBRIGATÓRIAS:
 3. MÚLTIPLOS PRESTADORES DE SERVIÇO: Se o texto citar mais de um prestador (ex: pintor, encanador, eletricista, pedreiro, marceneiro), preencha o campo "prestador" em cada item com a função/nome do prestador responsável pela mão de obra daquele serviço (ou "" se não citado).
 4. CORRIJA TODOS OS ERROS DE PORTUGUÊS, ortografia e pontuação em linguagem técnica clara e profissional, e DESCARTE conversas paralelas ou ruídos de microfone que não sejam do orçamento.
 5. Identifique se há uma Imobiliária no texto ou coloque "Particular".
+7. PADRONIZAÇÃO DE ENDEREÇO (BAURU/CEP): Remova zeros à esquerda nos números (ex: "04-016" ou "416" vire "4-16", mantendo o padrão "Rua Nome, 4-16"). Se houver CEP no texto, mantenha no final (ex: "Rua Antônio do Espírito Santo, 4-16 - CEP 17012-000"). Se o imóvel já existir nos dados internos, use exatamente o mesmo nome de endereço.
 6. NÃO invente prazo de execução: se não houver prazo citado no texto, retorne "prazoExecucao": "".
 
 Retorne EXCLUSIVAMENTE um JSON válido neste formato:
@@ -1712,7 +1713,8 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
           document.getElementById("deletePasswordError").classList.remove("hidden"); return;
         }
         if (id === "__MULTI__") {
-          const count = selectedJobIds.size;
+          const toDelete = jobsList.filter(j => selectedJobIds.has(j.id));
+          const count = toDelete.length;
           jobsList = jobsList.filter(j => !selectedJobIds.has(j.id));
           selectedJobIds.clear();
           multiSelectMode = false;
@@ -1722,13 +1724,16 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
           safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
           renderSavedJobs();
           document.getElementById("modalDeleteConfirm").classList.add("hidden");
-          showToast(`${count} orçamento(s) excluído(s)!`, "info");
+          showToast(`Excluindo ${count} orçamento(s) da planilha e do Drive...`, "info");
+          syncDeleteToCloud(toDelete);
         } else {
+          const targetJob = jobsList.find(j => j.id === id);
           jobsList = jobsList.filter(j => j.id !== id);
           safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
           renderSavedJobs();
           document.getElementById("modalDeleteConfirm").classList.add("hidden");
-          showToast("Excluído.", "info");
+          showToast("Excluído do aplicativo, planilha e Drive!", "info");
+          if (targetJob) syncDeleteToCloud([targetJob]);
         }
       });
 
@@ -1821,6 +1826,30 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
     // =========================================================================
     // EXPORTAÇÃO GOOGLE DOCS (.DOC), PNG E JPG + EDIÇÃO RÁPIDA DE ORÇAMENTO
     // =========================================================================
+    async function syncDeleteToCloud(itemsToDelete) {
+      const url = getGasUrl();
+      if (!url || !itemsToDelete.length) return;
+      try {
+        await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: itemsToDelete.length === 1 ? "deleteRecordAndFolders" : "deleteBatchAndFolders",
+            id: itemsToDelete[0].id,
+            attendanceFolderUrl: itemsToDelete[0].attendanceFolderUrl || "",
+            propertyFolderUrl: itemsToDelete[0].propertyFolderUrl || "",
+            items: itemsToDelete.map(x => ({
+              id: x.id,
+              attendanceFolderUrl: x.attendanceFolderUrl || "",
+              propertyFolderUrl: x.propertyFolderUrl || ""
+            }))
+          })
+        });
+      } catch (e) {
+        console.warn("Falha ao excluir na nuvem:", e);
+      }
+    }
+
     function downloadJobAsTxt(jobId) {
       const job = jobsList.find(j => j.id === jobId);
       if (!job) { showToast("Orçamento não encontrado.", "error"); return; }
@@ -2232,6 +2261,7 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
               <input data-ei-idx="${idx}" data-ei-field="valorMaoDeObra" type="number" step="0.01" value="${Number(it.valorMaoDeObra || 0)}" class="w-full px-2 py-1 rounded-lg border border-amber-300 bg-white text-[11px] font-bold text-right" />
             </div>
           </div>
+          <div class="text-right text-[10px] font-black text-[#07133A]" data-ei-sub="${idx}">Subtotal do item: ${formatCurrencyBr(Number(it.valorMaterial || 0) + Number(it.valorMaoDeObra || 0))}</div>
         </div>
       `).join("");
 
@@ -2242,6 +2272,8 @@ OBS: neste orçamento não tem a pintura das partes infiltradas.`;
           if (!editItemsDraft[i]) return;
           if (fld === "valorMaterial" || fld === "valorMaoDeObra") {
             editItemsDraft[i][fld] = parseFloat(inp.value) || 0;
+            const subEl = container.querySelector(`[data-ei-sub="${i}"]`);
+            if (subEl) subEl.textContent = "Subtotal do item: " + formatCurrencyBr((editItemsDraft[i].valorMaterial || 0) + (editItemsDraft[i].valorMaoDeObra || 0));
             recalcEditSums();
           } else {
             editItemsDraft[i][fld] = inp.value;
