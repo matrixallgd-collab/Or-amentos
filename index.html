@@ -18,6 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
@@ -457,7 +458,27 @@ Material 850, mão de obra 650, prazo 10 dias.
     let currentPreviewJobId = null;
     let currentCaptchaCode = "";
 
-    function getGeminiApiKey() { return String(appSettings.geminiApiKey || GEMINI_API_KEY || "").trim(); }
+    function getGeminiApiKey() {
+      let k = String(appSettings.geminiApiKey || GEMINI_API_KEY || "").trim();
+      if (!k) {
+        const legacyKeys = ["total_service_settings_v4", "total_service_settings_v3", "total_service_settings_v2", "grizoni_settings_v2", "grizoni_settings_v1"];
+        for (const lk of legacyKeys) {
+          try {
+            const raw = localStorage.getItem(lk);
+            if (raw) {
+              const obj = JSON.parse(raw);
+              if (obj && obj.geminiApiKey) {
+                k = String(obj.geminiApiKey).trim();
+                appSettings.geminiApiKey = k;
+                safeStorageSet(STORAGE_KEYS.SETTINGS, appSettings);
+                break;
+              }
+            }
+          } catch (e) {}
+        }
+      }
+      return k;
+    }
     function getGasUrl() { return String(appSettings.gasUrl || GAS_WEB_APP_URL || "").trim(); }
 
     function safeStorageGet(key, fallback) {
@@ -542,23 +563,30 @@ Material 850, mão de obra 650, prazo 10 dias.
       return `HISTÓRICO INTERNO TOT@L SERVICE:\n${recent}`;
     }
 
-    async function callPrivateGemini(parts) {
+    async function callPrivateGemini(parts, jsonMode = false) {
       const apiKey = getGeminiApiKey();
       if (!apiKey) throw new Error("NO_API_KEY");
 
-      const sysInstruction = `Você é o assistente privado da Tot@l Service (Camila Gouveia, Bauru-SP).
+      const sysInstruction = `Você é o assistente privado da Tot@l Service (Camila Gouveia e Marcelo Gouveia, Bauru-SP).
 PROIBIDO buscar na internet. Use SOMENTE os dados internos fornecidos (orçamentos anteriores, tabela de preços e arquivos anexados).
-Responda sempre em português do Brasil de forma simples e objetiva.`;
+Sempre corrija erros de português, pontuação e concordância, escrevendo em linguagem técnica clara e profissional de manutenção predial.
+Descarte qualquer conversa paralela, recado pessoal ou ruído de áudio que não seja serviço do imóvel.
+Responda sempre em português do Brasil.`;
+
+      const bodyObj = {
+        systemInstruction: { parts: [{ text: sysInstruction }] },
+        contents: [{ role: "user", parts }]
+      };
+      if (jsonMode) {
+        bodyObj.generationConfig = { responseMimeType: "application/json", temperature: 0.2 };
+      }
 
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: sysInstruction }] },
-            contents: [{ role: "user", parts }]
-          })
+          body: JSON.stringify(bodyObj)
         }
       );
       const data = await resp.json();
@@ -580,88 +608,152 @@ Responda sempre em português do Brasil de forma simples e objetiva.`;
       return hits > 0 ? { mat: Math.round(mat), mao: Math.round(mao) } : { mat: 180, mao: 140 };
     }
 
+    const BAURU_AGENCIES = [
+      "Imobiliária Grizoni", "Grizoni", "Concreto Imóveis", "Central Imobiliária",
+      "Lima Imóveis", "Canal Imobiliária", "Portão Imóveis", "Pôrto Imobiliária",
+      "Aero Imóveis", "Casa e Cia Imobiliária", "Imobiliária Fama", "Mansano Imobiliária",
+      "Zwicker Imóveis", "Zillo Imóveis", "Alves Imóveis", "Bauru Imóveis",
+      "Serrana Imóveis", "Vitória Imóveis", "Ribeiro Imóveis", "Morada Imóveis",
+      "Certa Imóveis", "Futura Imóveis", "Nova Bauru Imóveis", "União Imóveis",
+      "Lopes Bauru", "Imobiliária Paulista", "Imobiliária Ideal", "Imobiliária Cidade",
+      "Imobiliária Ouro Verde", "Imobiliária Bela Vista", "Imobiliária Estoril",
+      "Imobiliária Higienópolis", "Imobiliária Altos da Cidade", "Imobiliária Geisel",
+      "Imobiliária Redentor", "Imobiliária Mary Dota", "Imobiliária Independência",
+      "Imobiliária Nações", "Imobiliária Castelo", "Imobiliária Aeroporto"
+    ];
+
+    function detectAgencyName(text) {
+      const norm = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      for (const ag of BAURU_AGENCIES) {
+        const nAg = ag.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (norm.includes(nAg)) return ag === "Grizoni" ? "Imobiliária Grizoni" : ag;
+      }
+      const m = String(text || "").match(/imobili[aá]ria\s+([A-Za-zÀ-ÿ0-9\s&.-]{2,35})/i);
+      if (m && m[1]) {
+        return "Imobiliária " + m[1].trim().split(/[\n,.;]/)[0].trim();
+      }
+      return "Particular";
+    }
+
+    function cleanPortugueseService(txt) {
+      let s = String(txt || "").trim();
+      s = s.replace(/\b(mas|mais)\s+r?\$?\s*[\d.,]+.*/i, "").trim();
+      s = s.replace(/r\$\s*[\d.,]+/gi, "").replace(/\b(de\s+)?(material|m[aã]o\s*de\s*obra|total)\b[:\s\d.,]*/gi, "").trim();
+      s = s.replace(/\s{2,}/g, " ").replace(/^[,;:\-\s]+|[,;:\-\s]+$/g, "");
+      if (!s) return "";
+      s = s.charAt(0).toUpperCase() + s.slice(1);
+      if (!/[.!?]$/.test(s)) s += ".";
+      return s;
+    }
+
     function localSmartParse(rawText) {
-      const lines = String(rawText || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const cleanRaw = String(rawText || "").replace(/\s+/g, " ").trim();
+      const parseNum = (s) => {
+        if (!s) return 0;
+        let v = String(s).replace(/[^\d.,]/g, "");
+        if (v.includes(".") && v.includes(",")) v = v.replace(/\./g, "").replace(",", ".");
+        else if (v.includes(",")) v = v.replace(",", ".");
+        else if (/^\d{1,3}\.\d{3}$/.test(v)) v = v.replace(".", "");
+        return parseFloat(v) || 0;
+      };
+
       let imovel = "";
-      let cliente = "Particular";
-      let inquilinoNome = "";
-      let inquilinoCpf = "";
-      let prazo = "Prazo de execução 15 dias.";
-      let obs = "";
+      const endM = cleanRaw.match(/(?:rua|r\.|av\.?|avenida|alameda|travessa|condom[ií]nio)\s+[^,.;\n]+(?:,\s*n[º°]?\s*\d+[\w-]*)?/i);
+      if (endM) imovel = endM[0].trim();
+      if (!imovel) {
+        const firstLine = String(rawText || "").split(/\r?\n/)[0] || "";
+        imovel = firstLine.split(",")[0].trim().slice(0, 80) || "Endereço a confirmar";
+      }
 
-      const cpfM = rawText.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/);
-      if (cpfM) inquilinoCpf = cpfM[0];
+      const cliente = detectAgencyName(cleanRaw);
+      const cpfM = cleanRaw.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/);
+      const inquilinoCpf = cpfM ? cpfM[0] : "";
+      const inqM = cleanRaw.match(/inquilino\s*[:\-]?\s*([A-Za-zÀ-ÿ\s]{3,40})/i);
+      const inquilinoNome = inqM ? inqM[1].replace(/cpf.*/i, "").trim() : "";
 
-      const matM = rawText.match(/material\s*[:\-]?\s*r?\$?\s*([\d.,]+)/i);
-      const maoM = rawText.match(/m[aã]o\s*de\s*obra\s*[:\-]?\s*r?\$?\s*([\d.,]+)/i);
-      const totM = rawText.match(/total\s*[:\-]?\s*r?\$?\s*([\d.,]+)/i);
-      const parseNum = (s) => s ? (parseFloat(String(s).replace(/\./g, "").replace(",", ".")) || 0) : 0;
+      let totalMat = 0;
+      let totalMao = 0;
+      const matMatches = [...cleanRaw.matchAll(/(?:r\$\s*([\d.,]+)\s*(?:de\s+)?material|material\s*[:\-]?\s*(?:de\s+)?r?\$?\s*([\d.,]+))/gi)];
+      matMatches.forEach(m => { totalMat += parseNum(m[1] || m[2]); });
+      const maoMatches = [...cleanRaw.matchAll(/(?:r\$\s*([\d.,]+)\s*(?:de\s+)?m[aã]o\s*de\s*obra|m[aã]o\s*de\s*obra\s*[:\-]?\s*(?:de\s+)?r?\$?\s*([\d.,]+))/gi)];
+      maoMatches.forEach(m => { totalMao += parseNum(m[1] || m[2]); });
 
+      const serviceVerbs = /(trocar|troca|substitu|pintar|pintura|consert|repar|arrum|instal|limp|higieniz|enca|fia[cç][aã]o|el[eé]tric|hidr[aá]ul|telhad|calha|vazament|porta|janela|fechadura|tomada|interruptor|torneira|pia|vaso|gabinete|arm[aá]rio|piso|azulejo|vidro|gesso|muro|port[aã]o)/i;
+      const noiseRe = /(recadinho|campanha\s+de\s+ora[cç]|mam[aã]e|orar|ora[cç][õo]es|bom\s+dia|boa\s+tarde|oi\s+tudo\s+bem|programa)/i;
+
+      const chunks = String(rawText || "")
+        .split(/(?:\r?\n|;|\.|\b(?:trocar|fazer|consertar|instalar|pintar|arrumar|limpar|substituir)\b)/i);
+
+      // Re-split keeping action verbs cleanly by sentence/line or before action verbs
+      const rawSegments = String(rawText || "")
+        .replace(/\s+(trocar|fazer|consertar|instalar|pintar|arrumar|limpar|substituir)\s+/gi, "\n$1 ")
+        .split(/\r?\n|;/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const roomKeys = ["HALL", "SALA", "LAVABO", "QUARTO", "SUÍTE", "SUITE", "BANHEIRO", "COZINHA", "ÁREA", "AREA", "GARAGEM", "LAVANDERIA", "QUINTAL", "TELHADO", "CANIL"];
       const comodos = [];
       let curRoom = null;
-      const roomKeys = ["HALL", "SALA", "LAVABO", "QUARTO", "SUÍTE", "SUITE", "BANHEIRO", "COZINHA", "ÁREA", "AREA", "GARAGEM", "LAVANDERIA", "QUINTAL", "TELHADO", "CANIL"];
 
-      lines.forEach((line, idx) => {
-        if (!imovel && (idx === 0 || /^(rua|r\.|av\.|avenida|alameda|condom|im[oó]vel|endere)/i.test(line))) {
-          const parts = line.split(",");
-          imovel = parts[0].replace(/^(im[oó]vel|endere[çc]o)\s*[:\-]?\s*/i, "").trim();
-          if (parts[1] && /imobili|particular|seguradora/i.test(parts[1])) cliente = parts[1].trim();
+      rawSegments.forEach(seg => {
+        if (noiseRe.test(seg) && !serviceVerbs.test(seg)) return;
+        const up = seg.toUpperCase();
+        const foundRoom = roomKeys.find(rk => up.startsWith(rk) || up.includes(rk + ":"));
+        if (foundRoom && seg.includes(":")) {
+          const idx = seg.indexOf(":");
+          const rName = seg.slice(0, idx).trim().toUpperCase();
+          curRoom = { id: "rm-" + (comodos.length + 1), nome: rName, itens: [], fotos: [] };
+          comodos.push(curRoom);
+          const rest = seg.slice(idx + 1).trim();
+          if (rest && serviceVerbs.test(rest)) {
+            const desc = cleanPortugueseService(rest);
+            if (desc) {
+              const est = estimateByHistory(desc);
+              curRoom.itens.push({ descricao: desc, valorMaterial: est.mat, valorMaoDeObra: est.mao, valor: est.mat + est.mao });
+            }
+          }
           return;
         }
-        if (/inquilino/i.test(line) && !inquilinoNome) {
-          inquilinoNome = line.replace(/.*inquilino\s*[:\-]?\s*/i, "").replace(/cpf.*/i, "").trim();
-        }
-        if (/prazo/i.test(line)) { prazo = line; return; }
-        if (/^obs/i.test(line)) { obs = line.replace(/^obs\s*[:\-]?\s*/i, "").trim(); return; }
-        if (/valor\s*(material|m[aã]o|total)/i.test(line)) return;
-
-        const colonIdx = line.indexOf(":");
-        const prefix = colonIdx > 0 ? line.slice(0, colonIdx).trim().toUpperCase() : line.toUpperCase();
-        const isRoom = roomKeys.some(k => prefix.includes(k)) && prefix.length < 35;
-
-        if (isRoom) {
-          curRoom = { id: "rm-" + Date.now() + "-" + idx, nome: prefix, itens: [], fotos: [] };
-          comodos.push(curRoom);
-          const rest = colonIdx > 0 ? line.slice(colonIdx + 1).trim() : "";
-          if (rest) {
-            rest.split(/[;]/).map(s => s.trim()).filter(Boolean).forEach(t => {
-              const est = estimateByHistory(t);
-              curRoom.itens.push({ descricao: t, valorMaterial: est.mat, valorMaoDeObra: est.mao, valor: est.mat + est.mao });
-            });
-          }
-        } else {
+        if (serviceVerbs.test(seg)) {
           if (!curRoom) {
-            curRoom = { id: "rm-" + Date.now() + "-geral", nome: "SERVIÇOS GERAIS", itens: [], fotos: [] };
+            curRoom = { id: "rm-1", nome: "SERVIÇOS GERAIS", itens: [], fotos: [] };
             comodos.push(curRoom);
           }
-          const cleanIt = line.replace(/^[-•*]\s*/, "").trim();
-          if (cleanIt) {
-            const est = estimateByHistory(cleanIt);
-            curRoom.itens.push({ descricao: cleanIt, valorMaterial: est.mat, valorMaoDeObra: est.mao, valor: est.mat + est.mao });
+          const desc = cleanPortugueseService(seg);
+          if (desc && desc.length > 5) {
+            const est = estimateByHistory(desc);
+            curRoom.itens.push({ descricao: desc, valorMaterial: est.mat, valorMaoDeObra: est.mao, valor: est.mat + est.mao });
           }
         }
       });
 
-      let vMat = matM ? parseNum(matM[1]) : 0;
-      let vMao = maoM ? parseNum(maoM[1]) : 0;
-      let vTot = totM ? parseNum(totM[1]) : (vMat + vMao);
+      if (!comodos.length) {
+        comodos.push({
+          id: "rm-1",
+          nome: "SERVIÇOS GERAIS",
+          itens: [{ descricao: cleanPortugueseService(cleanRaw) || "Manutenção e reparos gerais no imóvel.", valorMaterial: totalMat || 250, valorMaoDeObra: totalMao || 250, valor: (totalMat + totalMao) || 500 }],
+          fotos: []
+        });
+      }
 
-      if (vTot === 0) {
-        comodos.forEach(r => r.itens.forEach(i => { vMat += i.valorMaterial; vMao += i.valorMaoDeObra; }));
-        vTot = vMat + vMao;
+      if (totalMat === 0 && totalMao === 0) {
+        comodos.forEach(c => c.itens.forEach(it => {
+          totalMat += Number(it.valorMaterial || 0);
+          totalMao += Number(it.valorMaoDeObra || 0);
+        }));
       }
 
       return {
-        imovel: imovel || "Imóvel (Editar Endereço)",
+        imovel,
         clienteOuImobiliaria: cliente,
         inquilinoNome,
         inquilinoCpf,
-        tipoDestinatario: /seguradora/i.test(rawText) ? "SEGURADORA" : "PARTICULAR",
-        prazoExecucao: prazo,
-        obsRessalvas: obs,
-        valorMaterial: vMat,
-        valorMaoDeObra: vMao,
-        valorTotal: vTot,
+        tipoDestinatario: /seguradora|porto seguro|tokio|liberty/i.test(cleanRaw) ? "SEGURADORA" : "PARTICULAR",
+        prazoExecucao: "Prazo de execução 15 dias.",
+        obsRessalvas: "",
+        valorMaterial: Math.round(totalMat),
+        valorMaoDeObra: Math.round(totalMao),
+        valorTotal: Math.round(totalMat + totalMao),
         comodos
       };
     }
@@ -689,12 +781,17 @@ Responda sempre em português do Brasil de forma simples e objetiva.`;
             if (m) parts.push({ inlineData: { mimeType: m[1], data: m[2] } });
           });
 
-          const prompt = `Organize o texto e/ou arquivos anexados em um orçamento completo da Tot@l Service seguindo o histórico interno.
-Se a usuária não informou valores, estime valores realistas de Material e Mão de Obra com base no histórico interno.
-Retorne EXCLUSIVAMENTE um JSON válido (sem markdown) neste formato:
+                    const prompt = `Organize o texto e/ou arquivos anexados em um orçamento oficial da Tot@l Service.
+REGRAS OBRIGATÓRIAS:
+1. CORRIJA TODOS OS ERROS DE PORTUGUÊS, ortografia e pontuação, reescrevendo cada serviço em linguagem técnica profissional (ex: "Substituição de encanamento hidráulico.", "Troca completa da fiação elétrica da residência.", "Pintura interna completa da residência.").
+2. DESCARTE E IGNORE completamente frases de conversa paralela, recados pessoais ou ruídos de microfone que não sejam serviços do imóvel (ex: "chegou um recadinho", "campanha de oração", etc.).
+3. SOME CORRETAMENTE os valores de Material e Mão de Obra de todos os itens citados no texto. Se algum item não tiver valor citado, estime com base no histórico interno abaixo. Garanta que valorTotal = valorMaterial + valorMaoDeObra.
+4. Identifique se há uma Imobiliária no texto (ex: Imobiliária Grizoni, Concreto Imóveis, etc.) ou coloque "Particular".
+
+Retorne EXCLUSIVAMENTE um JSON válido neste formato:
 {
-  "imovel": "endereço completo",
-  "clienteOuImobiliaria": "Particular, nome do cliente ou Imobiliária",
+  "imovel": "endereço completo corrigido",
+  "clienteOuImobiliaria": "Particular ou Nome da Imobiliária",
   "inquilinoNome": "nome do inquilino se houver",
   "inquilinoCpf": "CPF se houver",
   "tipoDestinatario": "SEGURADORA se mencionar seguradora, senão PARTICULAR",
@@ -704,22 +801,23 @@ Retorne EXCLUSIVAMENTE um JSON válido (sem markdown) neste formato:
   "valorMaoDeObra": 0,
   "valorTotal": 0,
   "comodos": [
-    { "nome": "NOME DO CÔMODO EM MAIÚSCULO", "itens": [ { "descricao": "descrição técnica clara", "valorMaterial": 0, "valorMaoDeObra": 0, "valor": 0 } ] }
+    { "nome": "NOME DO CÔMODO EM MAIÚSCULO", "itens": [ { "descricao": "descrição técnica corrigida", "valorMaterial": 0, "valorMaoDeObra": 0, "valor": 0 } ] }
   ]
 }
 
-Texto digitado pela Camila:
+Texto/áudio enviado pela Camila:
 ${text || "(Ver arquivos PDF/fotos anexados)"}
 
 ${buildInternalContextText()}`;
 
           parts.push({ text: prompt });
-          const raw = await callPrivateGemini(parts);
+          const raw = await callPrivateGemini(parts, true);
           const match = raw.match(/\{[\s\S]*\}/);
           if (match) parsed = JSON.parse(match[0]);
         }
       } catch (err) {
         console.warn("Fallback local parser:", err);
+        showToast("IA indisponível (" + (err.message || "erro") + "). Organizando pelo modo offline.", "warning");
       }
 
       if (!parsed) {
@@ -815,100 +913,236 @@ ${buildInternalContextText()}`;
       return `${appSettings.cidade || "Bauru"}, ${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`;
     }
 
-    async function generatePdfForJob(jobId, mode) {
+    async function generatePdfForJob(jobId, mode = "RESUMIDO") {
       const job = jobsList.find(j => j.id === jobId);
-      if (!job) return;
-      showToast("Gerando PDF Tot@l Service...", "info");
-
-      const isSeg = mode === "SEGURADORA";
-      let comodosHtml = "";
-      if (isSeg) {
-        comodosHtml = (job.comodos || []).map(rm => {
-          const rows = (rm.itens || []).map(it => `
-            <tr>
-              <td style="padding:6px 10px; border-bottom:1px solid #E2E8F0; font-size:12.5px;">• ${escapeHtml(it.descricao)}</td>
-              <td style="padding:6px 10px; border-bottom:1px solid #E2E8F0; font-size:12.5px; font-weight:800; text-align:right; width:120px;">${Number(it.valor) > 0 ? formatCurrencyBr(it.valor) : "-"}</td>
-            </tr>
-          `).join("");
-          return rows ? `<div style="margin-top:12px;"><div style="background:#07133A; color:#FFF; padding:6px 10px; font-size:12px; font-weight:900;">${escapeHtml(rm.nome)}</div><table style="width:100%; border-collapse:collapse; border:1px solid #CBD5E1;"><tbody>${rows}</tbody></table></div>` : "";
-        }).join("");
-      } else {
-        comodosHtml = (job.comodos || []).map(rm => {
-          const lis = (rm.itens || []).map(it => `<li style="margin-bottom:3px; font-size:12.5px; font-weight:500;">${escapeHtml(it.descricao)}</li>`).join("");
-          return lis ? `<div style="margin-top:11px; page-break-inside:avoid;"><div style="font-size:13px; font-weight:900; color:#07133A; text-transform:uppercase; margin-bottom:3px;">${escapeHtml(rm.nome)}</div><ul style="margin:0; padding-left:20px; list-style-type:disc;">${lis}</ul></div>` : "";
-        }).join("");
-      }
-
-      const vMat = Number(job.valorMaterial) || 0;
-      const vMao = Number(job.valorMaoDeObra) || 0;
-      const vTot = Number(job.valorTotal) || (vMat + vMao);
-
-      const allPhotos = [];
-      (job.comodos || []).forEach(rm => (rm.fotos || []).forEach(f => allPhotos.push({ comodo: rm.nome, legenda: f.legenda || "", url: f.lh3Url || f.dataUrl })));
-      const photosHtml = allPhotos.length ? `
-        <div style="margin-top:18px; page-break-inside:avoid;">
-          <div style="font-size:12px; font-weight:900; color:#07133A; text-transform:uppercase; margin-bottom:6px;">RELATÓRIO FOTOGRÁFICO</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            ${allPhotos.map(p => `<div style="border:1px solid #CBD5E1; border-radius:8px; padding:6px;"><div style="font-size:10px; font-weight:900;">${escapeHtml(p.comodo)}</div><img src="${p.url}" crossorigin="anonymous" style="width:100%; height:140px; object-fit:cover; border-radius:4px;" /></div>`).join("")}
-          </div>
-        </div>` : "";
-
-      const fullHtml = `
-        <div style="text-align:center; padding-bottom:12px; margin-bottom:14px; border-bottom:2.5px solid #07133A;">
-          <img src="${LOGO_BASE64}" style="max-width:410px; width:78%; height:auto; margin:0 auto; display:block;" />
-        </div>
-        <div style="font-size:13.5px; font-weight:900; text-transform:uppercase;">ORÇAMENTO DE CONSERTOS, REPAROS, HIGIENIZAÇÕES E LIMPEZAS</div>
-        <div style="font-size:13.5px; font-weight:900; color:#07133A; text-transform:uppercase; margin-top:3px;">IMÓVEL : ${escapeHtml(job.imovel)}</div>
-        <div style="font-size:13px; font-weight:900; margin-top:12px; padding-bottom:4px; border-bottom:1px solid #CBD5E1;">DOS VALORES DO ORÇAMENTO</div>
-        ${comodosHtml}
-        <div style="margin-top:16px; padding-top:12px; border-top:2px solid #07133A; page-break-inside:avoid;">
-          ${vMat > 0 ? `<div style="font-size:13.5px; font-weight:900;">VALOR MATERIAL ${formatCurrencyBr(vMat)}</div>` : ""}
-          ${vMao > 0 ? `<div style="font-size:13.5px; font-weight:900;">VALOR MÃO DE OBRA ${formatCurrencyBr(vMao)}</div>` : ""}
-          <div style="font-size:15.5px; font-weight:900; color:#07133A; margin-top:4px;">VALOR TOTAL ${formatCurrencyBr(vTot)}</div>
-          ${job.prazoExecucao ? `<div style="font-size:13px; font-weight:800; margin-top:8px;">${escapeHtml(job.prazoExecucao)}</div>` : ""}
-          ${job.obsRessalvas ? `<div style="margin-top:8px; background:#FFFBEB; border:1px solid #F59E0B; padding:8px; font-size:12px; font-weight:700;">OBS : ${escapeHtml(job.obsRessalvas)}</div>` : ""}
-        </div>
-        <div style="margin-top:20px; page-break-inside:avoid;">
-          <div style="font-size:13px; font-weight:700; margin-bottom:12px;">${escapeHtml(formatLongDatePtBr(job.dataEmissao))}</div>
-          <div style="font-size:13px; font-weight:800;">${escapeHtml(appSettings.responsavel || RESPONSAVEL_PADRAO)}</div>
-          <div style="font-size:12.5px; font-weight:800;">${escapeHtml(appSettings.telefone || TELEFONE_PADRAO)}</div>
-          <div style="font-size:12.5px; font-weight:800;">${escapeHtml(appSettings.creci || CNPJ_TOTAL_SERVICE)}</div>
-        </div>
-        ${photosHtml}
-      `;
-
-      const container = document.getElementById("pdfRenderContent");
-      container.innerHTML = fullHtml;
-      const fileName = `${String(job.imovel || "Orcamento").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 35)}.pdf`;
-
+      if (!job) { showToast("Orçamento não encontrado.", "error"); return; }
+      showToast("Gerando PDF profissional...", "info");
       try {
-        const pdfBlob = await html2pdf().set({
-          margin: [10, 10, 10, 10],
-          filename: fileName,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, width: 680, windowWidth: 680 },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-        }).from(container).outputPdf("blob");
+        const JsPDFClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
+        if (!JsPDFClass) {
+          showToast("Biblioteca de PDF ainda carregando, tente em 2 segundos.", "warning");
+          return;
+        }
 
+        const doc = new JsPDFClass({ unit: "mm", format: "a4", orientation: "portrait" });
+        const pageW = 210;
+        const pageH = 297;
+        const margin = 18;
+        const maxW = pageW - margin * 2;
+        let y = 16;
+
+        const vMat = Number(job.valorMaterial) || 0;
+        const vMao = Number(job.valorMaoDeObra) || 0;
+        const vTot = Number(job.valorTotal) || (vMat + vMao);
+        const clienteStr = String(job.clienteOuImobiliaria || "Particular").trim();
+        const isImob = clienteStr && !/^particular$/i.test(clienteStr);
+
+        // Cabeçalho com Logo(s): Tot@l Service sozinha (Particular) ou Tot@l Service + Imobiliária (quando identificada)
+        try {
+          if (isImob) {
+            doc.addImage(LOGO_BASE64, "JPEG", margin, y, 74, 24);
+            // Bloco institucional da Imobiliária parceira ao lado
+            doc.setDrawColor(182, 152, 90);
+            doc.setFillColor(7, 19, 58);
+            doc.roundedRect(pageW - margin - 82, y + 1, 82, 22, 2.5, 2.5, "FD");
+            doc.setTextColor(223, 196, 139);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(7.5);
+            doc.text("IMOBILIÁRIA PARCEIRA", pageW - margin - 41, y + 8, { align: "center" });
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10.5);
+            const agLines = doc.splitTextToSize(clienteStr.toUpperCase(), 76);
+            doc.text(agLines[0] || clienteStr.toUpperCase(), pageW - margin - 41, y + 16.5, { align: "center" });
+            y += 29;
+          } else {
+            doc.addImage(LOGO_BASE64, "JPEG", (pageW - 96) / 2, y, 96, 30);
+            y += 35;
+          }
+        } catch (imgErr) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(18);
+          doc.setTextColor(7, 19, 58);
+          doc.text("TOT@L SERVICE - PRESTAÇÃO DE SERVIÇOS", pageW / 2, y + 10, { align: "center" });
+          y += 18;
+        }
+
+        // Linha divisória azul-marinho
+        doc.setDrawColor(7, 19, 58);
+        doc.setLineWidth(0.6);
+        doc.line(margin, y, pageW - margin, y);
+        y += 8;
+
+        const ensureSpace = (neededMm) => {
+          if (y + neededMm > pageH - 18) {
+            doc.addPage();
+            y = 18;
+          }
+        };
+
+        // Título padrão Tot@l Service
+        doc.setTextColor(15, 23, 42);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text("ORÇAMENTO DE CONSERTOS, REPAROS, HIGIENIZAÇÕES E LIMPEZAS", margin, y);
+        y += 7;
+
+        // Endereço e Cliente/Imobiliária (fiel ao modelo original)
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10.5);
+        const imovelLines = doc.splitTextToSize(`Imóvel: ${job.imovel || "A definir"}`, maxW);
+        doc.text(imovelLines, margin, y);
+        y += imovelLines.length * 5.2 + 1.5;
+
+        if (isImob) {
+          doc.text(`Imobiliária : ${clienteStr}`, margin, y);
+          y += 5.5;
+        } else {
+          doc.text("Atendimento : Particular", margin, y);
+          y += 5.5;
+        }
+
+        if (job.inquilinoNome || job.inquilinoCpf) {
+          const inqText = `Inquilino: ${job.inquilinoNome || "-"}${job.inquilinoCpf ? " | CPF: " + job.inquilinoCpf : ""}`;
+          doc.text(inqText, margin, y);
+          y += 5.5;
+        }
+
+        y += 2;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10.5);
+        doc.text("DOS VALORES DO ORÇAMENTO", margin, y);
+        y += 6;
+
+        // Cômodos e lista de serviços
+        const comodos = Array.isArray(job.comodos) ? job.comodos : [];
+        comodos.forEach((c) => {
+          ensureSpace(14);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.setTextColor(7, 19, 58);
+          doc.text(String(c.nome || "SERVIÇOS").toUpperCase(), margin, y);
+          y += 5.2;
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(15, 23, 42);
+
+          (c.itens || []).forEach((it) => {
+            let lineTxt = `• ${it.descricao || ""}`;
+            if (mode === "SEGURADORA") {
+              const itVal = Number(it.valor) || (Number(it.valorMaterial || 0) + Number(it.valorMaoDeObra || 0));
+              if (itVal > 0) lineTxt += ` — ${formatCurrencyBr(itVal)}`;
+            }
+            const wrapped = doc.splitTextToSize(lineTxt, maxW - 4);
+            ensureSpace(wrapped.length * 4.8 + 2);
+            doc.text(wrapped, margin + 3, y);
+            y += wrapped.length * 4.8 + 1.2;
+          });
+          y += 2.5;
+        });
+
+        // Totais (Material + Mão de Obra separados + Total Geral)
+        ensureSpace(34);
+        y += 2;
+        doc.setDrawColor(7, 19, 58);
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageW - margin, y);
+        y += 7;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10.5);
+        doc.setTextColor(15, 23, 42);
+        if (vMat > 0) {
+          doc.text(`VALOR MATERIAL: ${formatCurrencyBr(vMat)}`, margin, y);
+          y += 5.5;
+        }
+        if (vMao > 0) {
+          doc.text(`VALOR MÃO DE OBRA: ${formatCurrencyBr(vMao)}`, margin, y);
+          y += 5.5;
+        }
+        doc.setFontSize(12);
+        doc.setTextColor(7, 19, 58);
+        doc.text(`VALOR TOTAL: ${formatCurrencyBr(vTot)}`, margin, y);
+        y += 7;
+
+        if (job.prazoExecucao) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.setTextColor(15, 23, 42);
+          doc.text(String(job.prazoExecucao), margin, y);
+          y += 6;
+        }
+
+        if (job.obsRessalvas) {
+          const obsLines = doc.splitTextToSize(`OBS : ${job.obsRessalvas}`, maxW);
+          ensureSpace(obsLines.length * 5 + 4);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9.5);
+          doc.text(obsLines, margin, y);
+          y += obsLines.length * 4.8 + 4;
+        }
+
+        // Assinatura padrão Bauru / Marcelo Gouveia / CNPJ
+        ensureSpace(28);
+        y += 6;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42);
+        doc.text(formatLongDatePtBr(job.dataEmissao), margin, y);
+        y += 8;
+        doc.setFont("helvetica", "bold");
+        doc.text(String(appSettings.responsavel || RESPONSAVEL_PADRAO), margin, y);
+        y += 5;
+        doc.setFont("helvetica", "normal");
+        doc.text(String(appSettings.telefone || TELEFONE_PADRAO), margin, y);
+        y += 5;
+        doc.text(String(appSettings.creci || CNPJ_TOTAL_SERVICE), margin, y);
+
+        // Fotos anexadas (se houver)
+        const allFotos = [];
+        comodos.forEach(c => (c.fotos || []).forEach(f => { if (f.dataUrl) allFotos.push(f); }));
+        if (allFotos.length > 0) {
+          doc.addPage();
+          y = 18;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(11);
+          doc.setTextColor(7, 19, 58);
+          doc.text("REGISTRO FOTOGRÁFICO", margin, y);
+          y += 8;
+          allFotos.slice(0, 6).forEach((f, idx) => {
+            try {
+              const col = idx % 2;
+              if (col === 0 && idx > 0) y += 64;
+              if (y + 60 > pageH - 16) { doc.addPage(); y = 18; }
+              const xPos = margin + col * 88;
+              const fmt = String(f.dataUrl).includes("image/png") ? "PNG" : "JPEG";
+              doc.addImage(f.dataUrl, fmt, xPos, y, 82, 56);
+            } catch (e) {}
+          });
+        }
+
+        const fileName = `${String(job.imovel || "Orcamento").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 35)}.pdf`;
+        const pdfBlob = doc.output("blob");
         const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
         if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
           await navigator.share({ title: fileName, files: [pdfFile] });
         } else {
           const url = URL.createObjectURL(pdfBlob);
           const a = document.createElement("a");
-          a.href = url; a.download = fileName;
-          document.body.appendChild(a); a.click(); a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 5000);
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
         }
-        showToast("PDF gerado!", "success");
-      } catch (err) {
-        if (err && err.name !== "AbortError") showToast("Erro ao gerar PDF.", "warning");
+        showToast("PDF gerado com sucesso!", "success");
+      } catch (e) {
+        console.error("Erro PDF:", e);
+        showToast("Erro ao gerar PDF: " + (e.message || e), "error");
       }
     }
 
-    // =========================================================================
-    // SINCRONIZAÇÃO GOOGLE SHEETS + DRIVE + RENDERIZAÇÃO DA LISTA
-    // =========================================================================
     async function saveAndSyncJob(job) {
       safeStorageSet(STORAGE_KEYS.JOBS, jobsList);
       renderSavedJobs();
